@@ -1,0 +1,4053 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Notfall Engineers – Multi-Role Demo (Engineer / Client / DAO)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- React stack -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Tailwind for layout helpers -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 🔗 Global FakeAPI (htdocs/demo/FakeAPI.js) -->
+    <script src="./FakeAPI.js"></script>
+
+    <style>
+      :root {
+        --nf-primary: #3a7bff;
+        --nf-primary-alt: #7a3fff;
+        --nf-accent: #00e1b4;
+        --nf-danger: #ff3b30;
+
+        --nf-dark-bg: radial-gradient(
+          circle at top left,
+          #172554 0,
+          #020617 55%,
+          #020617 100%
+        );
+        --nf-dark-shell: radial-gradient(
+          circle at 8% -20%,
+          #1d4ed8 0,
+          #020617 55%
+        );
+        --nf-dark-panel: radial-gradient(
+          circle at -10% -40%,
+          #1d4ed8 0,
+          #020617 60%
+        );
+        --nf-dark-widget: radial-gradient(
+          circle at -20% -40%,
+          #1d4ed8 0,
+          #020617 70%
+        );
+
+        --nf-light-bg: radial-gradient(
+          circle at top left,
+          #e0f2fe 0,
+          #f8fafc 60%,
+          #eef2ff 100%
+        );
+        --nf-light-shell: radial-gradient(
+          circle at 0% 0%,
+          #e0ecff 0,
+          #f8fafc 60%
+        );
+        --nf-light-panel: linear-gradient(135deg, #ffffff, #f1f5f9);
+        --nf-light-widget: linear-gradient(145deg, #f8fafc, #ffffff);
+
+        --nf-text-dark: #e5edf8;
+        --nf-text-muted-dark: #9ca3af;
+        --nf-text-light: #020617;
+        --nf-text-muted-light: #6b7280;
+      }
+
+      html,
+      body,
+      #root {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+          "Segoe UI", Roboto, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        background: var(--nf-dark-bg);
+      }
+
+      /* THEME ROOTS ------------------------------------------------------- */
+
+      .nf-root {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .nf-root.dark {
+        color: var(--nf-text-dark);
+      }
+
+      .nf-root.light {
+        color: var(--nf-text-light);
+        background: var(--nf-light-bg);
+      }
+
+      /* APP BAR ----------------------------------------------------------- */
+
+      .nf-appbar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: radial-gradient(
+          circle at 0% -80%,
+          #1d4ed8 0,
+          #020617 55%
+        );
+        box-shadow:
+          0 22px 60px rgba(0, 0, 0, 0.85),
+          0 0 0 1px rgba(15, 23, 42, 0.9);
+        border-bottom: 1px solid rgba(30, 64, 175, 0.8);
+        backdrop-filter: blur(18px);
+      }
+
+      .nf-appbar-inner {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 18px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .nf-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .nf-brand-logo {
+        height: 36px;
+        width: auto;
+        border-radius: 10px;
+        background: radial-gradient(
+          circle at 30% 20%,
+          #38bdf8,
+          #1d4ed8 60%,
+          #22c55e 100%
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.85);
+      }
+
+      .nf-brand-logo img {
+        height: 28px;
+        width: auto;
+        display: block;
+      }
+
+      .nf-brand-title {
+        font-weight: 800;
+        font-size: 18px;
+        letter-spacing: 0.03em;
+      }
+
+      .nf-brand-sub {
+        font-size: 11px;
+        opacity: 0.8;
+      }
+
+      .nf-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 4px 11px;
+        font-size: 11px;
+        background: radial-gradient(
+          circle at 0 0,
+          #16a34a 0,
+          #052e16 50%,
+          #020617 100%
+        );
+        color: #bbf7d0;
+        box-shadow:
+          0 10px 30px rgba(22, 163, 74, 0.75),
+          0 0 0 1px rgba(34, 197, 94, 0.5);
+      }
+
+      .nf-chip-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 14px rgba(34, 197, 94, 0.9);
+      }
+
+      .nf-appbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .nf-appbar-btn {
+        border-radius: 999px;
+        padding: 6px 14px;
+        border: 1px solid rgba(148, 163, 184, 0.7);
+        background: radial-gradient(
+          circle at 0 0,
+          rgba(15, 23, 42, 0.95),
+          rgba(15, 23, 42, 0.98)
+        );
+        color: #e5e7eb;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.95);
+        transition:
+          transform 0.1s ease,
+          box-shadow 0.16s ease,
+          border-color 0.16s ease,
+          background 0.16s ease;
+      }
+
+      .nf-appbar-btn:hover {
+        transform: translateY(-1px);
+        border-color: #38bdf8;
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.98);
+      }
+
+      .nf-appbar-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.9);
+      }
+
+      /* COMMON PRIMITIVES ------------------------------------------------- */
+
+      .nf-shell-bg {
+        max-width: 80rem;
+        margin: 1.8rem auto 2.4rem;
+        border-radius: 30px;
+        padding: 1.5rem 1.25rem 1.75rem;
+        background: var(--nf-dark-shell);
+        box-shadow:
+          0 26px 70px rgba(15, 23, 42, 0.9),
+          0 0 0 1px rgba(15, 23, 42, 0.85);
+      }
+
+      .nf-panel-main {
+        border-radius: 26px;
+        padding: 1.5rem 1.75rem 1.6rem;
+        background: var(--nf-dark-panel);
+        box-shadow:
+          0 22px 60px rgba(15, 23, 42, 0.85),
+          0 0 0 1px rgba(15, 23, 42, 0.85);
+        position: relative;
+        overflow: hidden;
+        transform-origin: center;
+        transition:
+          transform 0.2s ease,
+          box-shadow 0.25s ease,
+          border-color 0.2s ease;
+        border: 1px solid rgba(37, 99, 235, 0.7);
+      }
+
+      .nf-panel-main:hover {
+        transform: perspective(1200px) rotateX(0.4deg) rotateY(-0.7deg)
+          translateY(-1px);
+        box-shadow:
+          0 32px 90px rgba(15, 23, 42, 0.95),
+          0 0 0 1px rgba(96, 165, 250, 0.8);
+      }
+
+      .nf-main-border {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        padding: 2px;
+        pointer-events: none;
+      }
+
+      .nf-main-border-inner {
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        border: 1px solid rgba(56, 189, 248, 0.7);
+        box-shadow:
+          0 0 28px rgba(56, 189, 248, 0.75),
+          0 0 70px rgba(30, 64, 175, 0.9);
+      }
+
+      .nf-main-border-animating {
+        animation: nf-scan 950ms ease-out;
+      }
+
+      @keyframes nf-scan {
+        0% {
+          opacity: 0.4;
+          box-shadow:
+            0 0 10px rgba(22, 163, 74, 0.6),
+            0 0 40px rgba(22, 163, 74, 0.8);
+        }
+        40% {
+          opacity: 1;
+          box-shadow:
+            0 0 30px rgba(22, 163, 74, 0.9),
+            0 0 90px rgba(22, 101, 52, 1);
+        }
+        100% {
+          opacity: 0.75;
+          box-shadow:
+            0 0 24px rgba(56, 189, 248, 0.7),
+            0 0 70px rgba(30, 64, 175, 0.9);
+        }
+      }
+
+      .nf-panel-widget {
+        border-radius: 26px;
+        padding: 1.25rem 1.3rem;
+        background: var(--nf-dark-widget);
+        box-shadow:
+          0 18px 60px rgba(15, 23, 42, 0.9),
+          0 0 0 1px rgba(15, 23, 42, 0.9);
+      }
+
+      .nf-divider {
+        height: 1px;
+        width: 100%;
+        background: linear-gradient(
+          90deg,
+          rgba(148, 163, 184, 0),
+          rgba(148, 163, 184, 0.55),
+          rgba(148, 163, 184, 0)
+        );
+        margin: 0.5rem 0;
+      }
+
+      .nf-input {
+        width: 100%;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.55);
+        padding: 0.6rem 1rem;
+        background: radial-gradient(
+          circle at top left,
+          rgba(15, 23, 42, 0.9),
+          rgba(15, 23, 42, 0.98)
+        );
+        box-shadow:
+          inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+          0 12px 30px rgba(15, 23, 42, 0.9);
+        font-size: 0.9rem;
+        color: #e5edf8;
+        transition:
+          box-shadow 0.16s ease,
+          border-color 0.16s ease,
+          transform 0.08s ease,
+          background 0.16s ease;
+      }
+
+      .nf-input:focus {
+        outline: none;
+        border-color: #38bdf8;
+        box-shadow:
+          0 0 0 1px rgba(56, 189, 248, 0.8),
+          0 0 0 7px rgba(56, 189, 248, 0.25);
+        transform: translateY(-0.5px);
+      }
+
+      textarea.nf-input {
+        border-radius: 20px;
+        min-height: 90px;
+        resize: vertical;
+      }
+
+      .nf-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        border-radius: 999px;
+        padding: 0.55rem 1.2rem;
+        border: none;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 600;
+        background-image: linear-gradient(135deg, #2563eb, #4f46e5);
+        color: white;
+        box-shadow:
+          0 16px 40px rgba(37, 99, 235, 0.9),
+          0 0 0 1px rgba(191, 219, 254, 0.6);
+        transition:
+          transform 0.1s ease,
+          box-shadow 0.15s ease,
+          filter 0.12s ease;
+      }
+
+      .nf-btn-primary:hover:not(:disabled) {
+        transform: translateY(-1px);
+        filter: brightness(1.05);
+        box-shadow:
+          0 20px 55px rgba(37, 99, 235, 1),
+          0 0 0 1px rgba(219, 234, 254, 0.95);
+      }
+
+      .nf-btn-primary:active:not(:disabled) {
+        transform: translateY(0);
+        box-shadow:
+          0 10px 32px rgba(37, 99, 235, 0.95),
+          0 0 0 1px rgba(219, 234, 254, 0.9);
+      }
+
+      .nf-btn-primary:disabled {
+        opacity: 0.45;
+        cursor: default;
+        box-shadow: none;
+      }
+
+      .nf-btn-ghost {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        border-radius: 999px;
+        padding: 0.5rem 1rem;
+        border: 1px solid rgba(148, 163, 184, 0.7);
+        background: radial-gradient(
+          circle at top,
+          rgba(15, 23, 42, 0.95),
+          rgba(15, 23, 42, 0.98)
+        );
+        cursor: pointer;
+        font-size: 0.86rem;
+        font-weight: 500;
+        color: #e5e7eb;
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.95);
+        transition:
+          background 0.18s ease,
+          transform 0.08s ease,
+          box-shadow 0.16s ease,
+          border-color 0.16s ease;
+      }
+
+      .nf-btn-ghost:hover:not(:disabled) {
+        transform: translateY(-1px);
+        border-color: #38bdf8;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.98);
+      }
+
+      .nf-btn-ghost:disabled {
+        opacity: 0.45;
+        cursor: default;
+        box-shadow: none;
+      }
+
+      .nf-pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 0.18rem 0.65rem;
+        font-size: 0.72rem;
+        font-weight: 500;
+        gap: 0.35rem;
+        background: linear-gradient(145deg, #0f172a, #020617);
+        color: #e5e7eb;
+        border: 1px solid rgba(148, 163, 184, 0.7);
+        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.8);
+        white-space: nowrap;
+      }
+
+      .nf-pill-beta {
+        color: #ff3b30;
+        border-color: rgba(248, 113, 113, 0.9);
+        box-shadow: 0 0 18px rgba(248, 113, 113, 0.7);
+      }
+
+      .nf-muted {
+        color: var(--nf-text-muted-dark);
+      }
+
+      .nf-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 12px rgba(34, 197, 94, 0.9);
+        animation: nf-dot-pulse 1.6s ease-out infinite;
+      }
+
+      .nf-dot-idle {
+        background: #6b7280;
+        box-shadow: none;
+        animation: none;
+      }
+
+      @keyframes nf-dot-pulse {
+        0% {
+          transform: scale(0.9);
+          opacity: 0.7;
+        }
+        50% {
+          transform: scale(1.1);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(0.95);
+          opacity: 0.75;
+        }
+      }
+
+      /* Widget sidebar ---------------------------------------------------- */
+
+      .nf-widget-item {
+        border-radius: 18px;
+        padding: 0.6rem 0.7rem;
+        border: 1px solid transparent;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        width: 100%;
+        cursor: pointer;
+        transition:
+          background 0.16s ease,
+          box-shadow 0.2s ease,
+          border-color 0.16s ease,
+          transform 0.08s ease,
+          opacity 0.16s ease;
+      }
+
+      .nf-widget-item-default {
+        background: transparent;
+      }
+
+      .nf-widget-item-default:hover {
+        background: rgba(15, 23, 42, 0.95);
+        border-color: rgba(148, 163, 184, 0.6);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.98);
+      }
+
+      .nf-widget-item-active {
+        background: radial-gradient(circle at -10% -40%, #2563eb, #020617 70%);
+        border-color: rgba(96, 165, 250, 0.95);
+        box-shadow:
+          0 20px 50px rgba(37, 99, 235, 0.95),
+          0 0 0 1px rgba(191, 219, 254, 0.9);
+        transform: translateY(-1px);
+      }
+
+      .nf-widget-item-locked {
+        opacity: 0.4;
+        cursor: default;
+      }
+
+      .nf-circle-small {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: #4b5563;
+      }
+
+      .nf-circle-small.active {
+        background: #22c55e;
+        box-shadow: 0 0 12px rgba(34, 197, 94, 0.9);
+      }
+
+      /* Status badge ------------------------------------------------------ */
+
+      .nf-status-badge {
+        border-radius: 999px;
+        padding: 3px 9px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .nf-status-not-submitted {
+        background: rgba(15, 23, 42, 0.7);
+        color: #9ca3af;
+      }
+
+      .nf-status-pending {
+        background: rgba(251, 191, 36, 0.13);
+        color: #fbbf24;
+      }
+
+      .nf-status-approved {
+        background: rgba(16, 185, 129, 0.17);
+        color: #6ee7b7;
+      }
+
+      .nf-status-rejected {
+        background: rgba(248, 113, 113, 0.18);
+        color: #fecaca;
+      }
+
+      /* Skeleton loader --------------------------------------------------- */
+
+      .nf-skeleton {
+        animation: nf-skel 1.4s ease-in-out infinite;
+        background: linear-gradient(
+          90deg,
+          rgba(148, 163, 184, 0.3),
+          rgba(148, 163, 184, 0.55),
+          rgba(148, 163, 184, 0.3)
+        );
+        background-size: 200% 100%;
+      }
+
+      .nf-skeleton.rounded {
+        border-radius: 999px;
+      }
+
+      @keyframes nf-skel {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+
+      /* Task Inbox live state + Job Wallet strip ------------------------- */
+
+      .nf-live-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 999px;
+        padding: 0.24rem 0.7rem;
+        font-size: 0.75rem;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(148, 163, 184, 0.7);
+      }
+
+      .nf-task-card {
+        border-radius: 18px;
+        padding: 0.85rem 0.9rem;
+        margin-bottom: 0.7rem;
+        border: 1px solid rgba(80, 120, 255, 0.7);
+        background: radial-gradient(
+          circle at 20% 0%,
+          #1b2a68 0%,
+          #0d1a45 35%,
+          #08122f 70%,
+          #050a1f 100%
+        );
+        box-shadow:
+          0 18px 60px rgba(5, 10, 40, 0.9),
+          0 0 0 1px rgba(10, 20, 60, 0.95);
+        transition:
+          transform 0.12s ease,
+          box-shadow 0.18s ease,
+          background 0.18s ease,
+          border-color 0.18s ease;
+      }
+
+      .nf-task-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(129, 140, 248, 1);
+        box-shadow:
+          0 24px 70px rgba(10, 20, 60, 0.95),
+          0 0 0 1px rgba(191, 219, 254, 0.9);
+      }
+
+      .nf-task-card-new {
+        animation: nf-new-task 850ms ease-out;
+      }
+
+      @keyframes nf-new-task {
+        0% {
+          box-shadow:
+            0 0 0 0 rgba(34, 197, 94, 0.95),
+            0 20px 50px rgba(5, 10, 40, 0.9);
+          transform: translateY(-1px);
+        }
+        70% {
+          box-shadow:
+            0 0 0 8px rgba(34, 197, 94, 0),
+            0 20px 50px rgba(5, 10, 40, 0.9);
+        }
+        100% {
+          box-shadow:
+            0 18px 60px rgba(5, 10, 40, 0.9),
+            0 0 0 1px rgba(10, 20, 60, 0.95);
+          transform: translateY(0);
+        }
+      }
+
+      .nf-job-wallet-strip {
+        margin-top: 0.55rem;
+        border-radius: 12px;
+        padding: 0.35rem 0.6rem;
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        background: radial-gradient(circle at 0 0, #22c55e33, #022c22 70%);
+        border: 1px solid rgba(45, 212, 191, 0.7);
+        color: #bbf7d0;
+      }
+
+      .nf-job-wallet-tag {
+        border-radius: 999px;
+        padding: 0.12rem 0.6rem;
+        border: 1px solid rgba(45, 212, 191, 0.8);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      /* DAO digital card overlay ----------------------------------------- */
+
+      .nf-dao-overlay {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(
+          circle at top,
+          rgba(15, 23, 42, 0.97),
+          rgba(2, 6, 23, 0.98)
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 60;
+      }
+
+      .nf-dao-card {
+        width: 360px;
+        border-radius: 30px;
+        padding: 18px 18px 20px;
+        background: radial-gradient(circle at -10% -40%, #2563eb, #020617 70%);
+        box-shadow:
+          0 28px 90px rgba(0, 0, 0, 0.95),
+          0 0 0 1px rgba(129, 140, 248, 0.7);
+        color: #e5edf8;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .nf-dao-card-glow {
+        position: absolute;
+        inset: -40%;
+        opacity: 0.35;
+        background:
+          radial-gradient(circle at 20% 0%, #38bdf8, transparent 60%),
+          radial-gradient(circle at 80% 100%, #22c55e, transparent 60%);
+        pointer-events: none;
+      }
+
+      .nf-dao-card-inner {
+        position: relative;
+        z-index: 1;
+      }
+
+      .nf-dao-chip {
+        border-radius: 999px;
+        padding: 3px 9px;
+        font-size: 11px;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(148, 163, 184, 0.7);
+      }
+
+      .nf-dao-footer {
+        margin-top: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .nf-dao-footer-right {
+        display: inline-flex;
+        gap: 8px;
+      }
+
+      /* Earnings widget --------------------------------------------------- */
+
+      .nf-earn-tabs {
+        display: inline-flex;
+        border-radius: 999px;
+        padding: 2px;
+        border: 1px solid rgba(148, 163, 184, 0.6);
+        background: radial-gradient(circle at 0 0, #020617, #020617);
+      }
+
+      .nf-earn-tab-btn {
+        position: relative;
+        border-radius: 999px;
+        border: none;
+        padding: 4px 11px;
+        font-size: 11px;
+        cursor: pointer;
+        background: transparent;
+        color: #cbd5f5;
+        opacity: 0.7;
+      }
+
+      .nf-earn-tab-btn.active {
+        background: radial-gradient(circle at 0 0, #2563eb, #1d4ed8);
+        opacity: 1;
+        color: white;
+        box-shadow: 0 10px 26px rgba(37, 99, 235, 0.9);
+      }
+
+      .nf-earn-range-tabs {
+        display: inline-flex;
+        border-radius: 999px;
+        padding: 2px;
+        border: 1px solid rgba(148, 163, 184, 0.6);
+      }
+
+      .nf-earn-range-btn {
+        border-radius: 999px;
+        border: none;
+        font-size: 11px;
+        padding: 3px 10px;
+        background: transparent;
+        color: #e5e7eb;
+        cursor: pointer;
+        opacity: 0.7;
+      }
+
+      .nf-earn-range-btn.active {
+        background: radial-gradient(circle at 0 0, #4f46e5, #1d4ed8);
+        box-shadow: 0 10px 26px rgba(59, 130, 246, 0.9);
+        opacity: 1;
+      }
+
+      .nf-earn-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.9rem;
+        margin-top: 1rem;
+      }
+
+      .nf-earn-kpi-card {
+        border-radius: 18px;
+        padding: 0.75rem 0.9rem;
+        background: radial-gradient(circle at -10% -30%, #1d4ed8, #020617 70%);
+        border: 1px solid rgba(37, 99, 235, 0.8);
+        box-shadow:
+          0 18px 50px rgba(15, 23, 42, 0.9),
+          0 0 0 1px rgba(15, 23, 42, 0.95);
+        font-size: 12px;
+      }
+
+      .nf-earn-chart-shell {
+        margin-top: 1.1rem;
+        border-radius: 18px;
+        padding: 0.9rem 1.1rem 0.9rem;
+        background: radial-gradient(circle at 0 -40%, #1d4ed8, #020617 75%);
+        border: 1px solid rgba(59, 130, 246, 0.9);
+        box-shadow:
+          0 22px 60px rgba(15, 23, 42, 0.95),
+          0 0 0 1px rgba(15, 23, 42, 0.95);
+      }
+
+      .nf-earn-chart-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 6px;
+        font-size: 10px;
+        color: rgba(226, 232, 240, 0.7);
+      }
+
+      .nf-earn-jobwallet-row {
+        margin-top: 0.5rem;
+        border-radius: 14px;
+        padding: 0.6rem 0.8rem;
+        background: radial-gradient(circle at 0 -40%, #0f766e, #022c22 70%);
+        border: 1px solid rgba(45, 212, 191, 0.85);
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.7rem;
+        color: #ccfbf1;
+        cursor: pointer;
+        box-shadow:
+          0 14px 42px rgba(15, 23, 42, 0.95),
+          0 0 0 1px rgba(15, 23, 42, 0.9);
+        transition:
+          transform 0.1s ease,
+          box-shadow 0.16s ease,
+          border-color 0.16s ease,
+          background 0.16s ease;
+      }
+
+      .nf-earn-jobwallet-row:hover {
+        transform: translateY(-1px);
+        border-color: rgba(125, 211, 252, 1);
+        box-shadow:
+          0 18px 56px rgba(15, 23, 42, 0.98),
+          0 0 0 1px rgba(56, 189, 248, 0.9);
+      }
+
+      .nf-earn-jobwallet-row-active {
+        border-color: rgba(56, 189, 248, 0.95);
+        box-shadow:
+          0 20px 60px rgba(15, 23, 42, 1),
+          0 0 0 1px rgba(56, 189, 248, 0.95);
+      }
+
+      .nf-earn-jobwallet-row-title {
+        font-weight: 600;
+        font-size: 12px;
+      }
+
+      .nf-earn-jobwallet-row-meta {
+        font-size: 10px;
+        opacity: 0.9;
+      }
+
+      .nf-earn-jobwallet-row-kpi {
+        text-align: right;
+        font-size: 10px;
+      }
+
+      /* Inline Job Wallet card layout (right-hand side) ------------------- */
+
+      .nf-jobwallet-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.1fr);
+        gap: 1.1rem;
+        margin-top: 0.75rem;
+        align-items: stretch;
+      }
+
+      .nf-jobwallet-list {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .nf-jobwallet-selected {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .nf-jobwallet-card-shell {
+        width: 100%;
+        max-width: 420px;
+        margin-left: auto;
+        margin-right: auto;
+        border-radius: 24px;
+        padding: 0.8rem;
+        background: radial-gradient(circle at -10% -40%, #1d4ed8, #020617 70%);
+        box-shadow:
+          0 24px 70px rgba(15, 23, 42, 0.95),
+          0 0 0 1px rgba(15, 23, 42, 0.9);
+      }
+
+      /* Actual virtual card itself --------------------------------------- */
+
+      .nf-jobwallet-card {
+        position: relative;
+        border-radius: 20px;
+        padding: 16px 20px 18px;
+        background: radial-gradient(
+          circle at 0 0,
+          #1d4ed8 0,
+          #059669 70%,
+          #022c22 100%
+        );
+        color: #e5edf8;
+        box-shadow:
+          0 18px 55px rgba(15, 23, 42, 0.98),
+          0 0 0 1px rgba(15, 23, 42, 0.95);
+        overflow: hidden;
+        cursor: pointer;
+        transform-origin: center;
+        transition:
+          transform 0.16s ease,
+          box-shadow 0.2s ease,
+          filter 0.18s ease;
+      }
+
+      .nf-jobwallet-card::before {
+        content: "";
+        position: absolute;
+        inset: -40%;
+        background:
+          radial-gradient(
+            circle at 0% 0%,
+            rgba(56, 189, 248, 0.7),
+            transparent 60%
+          ),
+          radial-gradient(
+            circle at 100% 100%,
+            rgba(34, 197, 94, 0.75),
+            transparent 65%
+          );
+        opacity: 0.4;
+        pointer-events: none;
+      }
+
+      .nf-jobwallet-card-inner {
+        position: relative;
+        z-index: 1;
+      }
+
+      .nf-jobwallet-card:hover {
+        transform: translateY(-2px) scale(1.01);
+        box-shadow:
+          0 26px 75px rgba(15, 23, 42, 1),
+          0 0 0 1px rgba(191, 219, 254, 0.95);
+        filter: saturate(1.05);
+      }
+
+      .nf-jobwallet-card:active {
+        transform: translateY(0) scale(0.995);
+        box-shadow:
+          0 18px 50px rgba(15, 23, 42, 0.95),
+          0 0 0 1px rgba(148, 163, 184, 0.9);
+        filter: saturate(1);
+      }
+
+      .nf-jobwallet-chip-front {
+        width: 32px;
+        height: 24px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #facc15, #f97316);
+        box-shadow:
+          0 0 0 1px rgba(15, 23, 42, 0.6),
+          0 10px 20px rgba(15, 23, 42, 0.9);
+      }
+
+      .nf-card-label {
+        letter-spacing: 0.18em;
+        font-size: 10px;
+        text-transform: uppercase;
+        opacity: 0.9;
+      }
+
+      /* Digital amount styling -------------------------------------------- */
+
+      .nf-card-amount-digital {
+        font-size: 2.4rem;
+        line-height: 1.05;
+        letter-spacing: 0.04em;
+        font-weight: 800;
+        color: #bbf7d0;
+        text-shadow:
+          0 0 10px rgba(74, 222, 128, 0.9),
+          0 0 26px rgba(22, 163, 74, 0.85),
+          0 0 40px rgba(22, 163, 74, 0.85);
+        filter: drop-shadow(0 0 6px rgba(22, 163, 74, 0.9));
+      }
+
+      .nf-card-amount-digital span.currency {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-left: 0.25rem;
+        opacity: 0.9;
+      }
+
+      @keyframes nf-amount-glow {
+        0% {
+          text-shadow:
+            0 0 8px rgba(74, 222, 128, 0.8),
+            0 0 20px rgba(22, 163, 74, 0.7),
+            0 0 32px rgba(22, 163, 74, 0.7);
+          opacity: 0.98;
+        }
+        50% {
+          text-shadow:
+            0 0 14px rgba(74, 222, 128, 1),
+            0 0 32px rgba(22, 163, 74, 0.9),
+            0 0 56px rgba(22, 163, 74, 0.9);
+          opacity: 1;
+        }
+        100% {
+          text-shadow:
+            0 0 8px rgba(74, 222, 128, 0.85),
+            0 0 24px rgba(22, 163, 74, 0.78),
+            0 0 40px rgba(22, 163, 74, 0.78);
+          opacity: 0.99;
+        }
+      }
+
+      .nf-card-amount-digital.glow {
+        animation: nf-amount-glow 3.1s ease-in-out infinite;
+      }
+
+      .nf-card-pan {
+        font-size: 13px;
+        letter-spacing: 0.25em;
+        opacity: 0.96;
+      }
+
+      .nf-card-meta-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1.5rem;
+        font-size: 10px;
+        margin-top: 6px;
+      }
+
+      .nf-card-meta-label {
+        opacity: 0.8;
+      }
+
+      .nf-card-meta-value {
+        font-weight: 600;
+      }
+
+      .nf-card-engineer {
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-top: 6px;
+      }
+
+      .nf-card-footer-text {
+        font-size: 10px;
+        margin-top: 10px;
+        opacity: 0.9;
+      }
+
+      .nf-card-toggle {
+        display: inline-flex;
+        border-radius: 999px;
+        padding: 3px;
+        border: 1px solid rgba(148, 163, 184, 0.7);
+        background: radial-gradient(
+          circle at 0 0,
+          rgba(15, 23, 42, 0.95),
+          rgba(15, 23, 42, 0.98)
+        );
+        box-shadow: 0 12px 26px rgba(15, 23, 42, 0.98);
+      }
+
+      .nf-card-toggle button {
+        border-radius: 999px;
+        border: none;
+        padding: 3px 12px;
+        font-size: 11px;
+        cursor: pointer;
+        background: transparent;
+        color: #e5e7eb;
+        opacity: 0.7;
+        transition:
+          background 0.16s ease,
+          opacity 0.16s ease,
+          box-shadow 0.2s ease;
+      }
+
+      .nf-card-toggle button.active {
+        background: radial-gradient(circle at 0 0, #2563eb, #1d4ed8);
+        opacity: 1;
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.9);
+      }
+
+      .nf-card-zoom-hint {
+        margin-top: 0.4rem;
+        font-size: 10px;
+        color: rgba(226, 232, 240, 0.8);
+        text-align: right;
+      }
+
+      /* Full-screen card zoom overlay ------------------------------------ */
+
+      .nf-card-overlay {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(
+          circle at top,
+          rgba(15, 23, 42, 0.97),
+          rgba(2, 6, 23, 0.98)
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 60;
+      }
+
+      .nf-card-modal {
+        width: 420px;
+        max-width: calc(100% - 40px);
+        border-radius: 28px;
+        padding: 20px 22px 22px;
+        background: radial-gradient(circle at -10% -40%, #1d4ed8, #020617 70%);
+        box-shadow:
+          0 32px 90px rgba(0, 0, 0, 0.96),
+          0 0 0 1px rgba(148, 163, 184, 0.7);
+        color: #e5edf8;
+      }
+
+      .nf-card-modal-footer {
+        margin-top: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 11px;
+      }
+
+      .nf-card-modal-copy {
+        font-size: 10px;
+        color: rgba(226, 232, 240, 0.85);
+        margin-top: 10px;
+      }
+
+      @media (max-width: 960px) {
+        .nf-jobwallet-layout {
+          grid-template-columns: minmax(0, 1fr);
+        }
+
+        .nf-jobwallet-selected {
+          margin-top: 0.75rem;
+        }
+      }
+
+      /* Small extras for fields & role menu ------------------------------- */
+
+      .nf-field-label {
+        font-size: 11px;
+        font-weight: 500;
+        color: rgba(226, 232, 240, 0.9);
+        margin-bottom: 4px;
+        display: block;
+      }
+
+      .nf-role-menu {
+        position: absolute;
+        right: 0;
+        margin-top: 0.5rem;
+        min-width: 220px;
+        border-radius: 16px;
+        padding: 0.4rem;
+        background: radial-gradient(
+          circle at -10% -40%,
+          #1d4ed8,
+          #020617 70%
+        );
+        box-shadow:
+          0 22px 60px rgba(15, 23, 42, 0.98),
+          0 0 0 1px rgba(30, 64, 175, 0.9);
+        z-index: 40;
+      }
+
+      .nf-role-menu-item {
+        width: 100%;
+        border-radius: 12px;
+        padding: 0.45rem 0.6rem;
+        text-align: left;
+        border: 1px solid transparent;
+        background: transparent;
+        color: #e5edf8;
+        cursor: pointer;
+        transition:
+          background 0.16s ease,
+          border-color 0.16s ease,
+          transform 0.08s ease;
+      }
+
+      .nf-role-menu-item:hover {
+        background: rgba(15, 23, 42, 0.95);
+        border-color: rgba(148, 163, 184, 0.7);
+        transform: translateY(-1px);
+      }
+
+      .nf-role-menu-item-active {
+        border-color: rgba(59, 130, 246, 0.9);
+        background: radial-gradient(circle at -10% -40%, #2563eb, #020617 70%);
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      
+      const { useState, useEffect, useMemo, useRef } = React;
+      // Shared WebSocket for all widgets (Asset registry, Task inbox, etc.)
+const widgetSocketRef = { current: null };
+
+
+function getWidgetSocket() {
+  if (
+    widgetSocketRef.current &&
+    widgetSocketRef.current.readyState === WebSocket.OPEN
+  ) {
+    return widgetSocketRef.current;
+  }
+
+  const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+  const wsUrl = `${proto}//${window.location.host}`;
+  const ws = new WebSocket(wsUrl);
+
+  ws.onopen = () => {
+    console.log("[widgetSocket] connected to", wsUrl);
+  };
+
+  ws.onclose = () => {
+    console.log("[widgetSocket] closed");
+  };
+
+  ws.onerror = (err) => {
+    console.warn("[widgetSocket] error", err);
+  };
+
+  widgetSocketRef.current = ws;
+  return ws;
+}
+
+      const api = window.FakeAPI || {};
+      
+
+
+      /* -------------------------------------------------------------------
+       * Helpers
+       * ------------------------------------------------------------------ */
+
+  function useAlertEngine() {
+  const [enabled, setEnabled] = useState(false);
+
+  function beep() {
+    if (!enabled) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.type = "sine";
+      o.frequency.value = 880;
+      g.gain.value = 0.04;
+      o.start();
+      setTimeout(() => {
+        o.stop();
+        ctx.close?.();
+      }, 140);
+    } catch {}
+  }
+
+  function vibrate() {
+    if (!enabled) return;
+    try {
+      if (navigator.vibrate) navigator.vibrate([60, 40, 60]);
+    } catch {}
+  }
+
+  function notify(kind = "info") {
+    // kind: "task" | "critical" | "info"
+    beep();
+    if (kind === "task" || kind === "critical") vibrate();
+  }
+
+  return { enabled, setEnabled, notify };
+}
+
+
+      function Skeleton({ className = "" }) {
+        return <div className={`nf-skeleton ${className}`} />;
+      }
+
+      function Field({ label, children }) {
+        return (
+          <div className="space-y-1">
+            {label && <label className="nf-field-label">{label}</label>}
+            {children}
+          </div>
+        );
+      }
+
+      function StatusBadge({ status }) {
+        const s = (status || "").toUpperCase();
+        let cls = "nf-status-badge ";
+        if (s === "NEW" || s === "OPEN" || s === "REQUESTED")
+          cls += "nf-status-pending";
+        else if (
+          s === "ACCEPTED" ||
+          s === "ENROUTE" ||
+          s === "ONSITE" ||
+          s === "APPROVED"
+        )
+          cls += "nf-status-approved";
+        else if (s === "COMPLETED" || s === "PAID")
+          cls += "nf-status-approved";
+        else if (s === "REJECTED" || s === "FAILED" || s === "DECLINED")
+          cls += "nf-status-rejected";
+        else cls += "nf-status-not-submitted";
+        return <span className={cls}>{status || "Unknown"}</span>;
+      }
+
+      function timeAgo(iso) {
+        if (!iso) return "just now";
+        const d = new Date(iso);
+        const diffMs = Date.now() - d.getTime();
+        const sec = Math.max(1, Math.floor(diffMs / 1000));
+        const min = Math.floor(sec / 60);
+        const hr = Math.floor(min / 60);
+        const day = Math.floor(hr / 24);
+        if (day > 1) return `${day} days ago`;
+        if (day === 1) return "1 day ago";
+        if (hr > 1) return `${hr} hours ago`;
+        if (hr === 1) return "1 hour ago";
+        if (min > 1) return `${min} mins ago`;
+        if (min === 1) return "1 min ago";
+        return "just now";
+      }
+
+      /* -------------------------------------------------------------------
+       * Job Wallet Card (front/back + overlay)
+       * ------------------------------------------------------------------ */
+
+      function generatePAN(taskId) {
+        const base = (taskId || "WF-0000").replace(/\D/g, "") || "987654";
+        const padded = (base + "1234567890123456").slice(0, 16);
+        return padded
+          .match(/.{1,4}/g)
+          .join(" ")
+          .trim();
+      }
+
+      function JobWalletCard({ wallet, side, onSideChange, onDoubleClick }) {
+        if (!wallet) return null;
+        const pan = generatePAN(wallet.taskId);
+        const engineerName = wallet.engineerName || "DAO ENGINEER • LIVE BETA";
+        const expiry = wallet.expiry || "12/28";
+
+        return (
+          <div className="nf-jobwallet-card-shell">
+            <div
+              className="nf-jobwallet-card"
+              onDoubleClick={onDoubleClick}
+              title="Double-click to zoom"
+            >
+              <div className="nf-jobwallet-card-inner space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="space-y-1">
+                    <div className="nf-card-label">
+                      JOB WALLET • REVOLUT <span className="text-red-400">LIVE BETA</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px]">
+                      <span className="nf-job-wallet-tag">
+                        {wallet.trade || "Multi-trade"}
+                      </span>
+                      <span className="nf-pill nf-pill-beta">
+                        STREAM • DYNAMIC PAN • DAO
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="nf-jobwallet-chip-front" />
+                    <span className="text-[9px] tracking-[0.18em] uppercase opacity-90">
+                      DAO · FCA SANDBOX
+                    </span>
+                  </div>
+                </div>
+
+                {side === "front" ? (
+                  <>
+                    <div className="nf-card-amount-digital glow">
+                      £{wallet.amount?.toFixed ? wallet.amount.toFixed(0) : wallet.amount}
+                      <span className="currency">GBP</span>
+                    </div>
+                    <div className="text-[10px] opacity-90">
+                      Time-bound buffer for{" "}
+                      <span className="font-semibold">{wallet.title}</span>.
+                      Unused funds auto-refund to client at completion.
+                    </div>
+                    <div className="nf-card-pan mt-2">{pan}</div>
+                    <div className="nf-card-meta-row">
+                      <div>
+                        <div className="nf-card-meta-label">EXP</div>
+                        <div className="nf-card-meta-value">{expiry}</div>
+                      </div>
+                      <div>
+                        <div className="nf-card-meta-label">SLA</div>
+                        <div className="nf-card-meta-value">
+                          {(wallet.slaHours || 2) + "h · ETA " + (wallet.etaMinutes || 30) + "m"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="nf-card-meta-label">RATE</div>
+                        <div className="nf-card-meta-value">
+                          {wallet.rate ? `£${wallet.rate}/hr` : "£65/hr"}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="nf-card-engineer mt-2">
+                      {engineerName}
+                    </div>
+                    <div className="nf-card-footer-text">
+                      DAO hologram linked to on-chain status • colour by trade •
+                      dynamic PAN per job wallet.
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-xs uppercase tracking-[0.22em] opacity-80">
+                      BACK OF CARD • WORKFLOW SNAPSHOT
+                    </div>
+                    <ul className="mt-2 space-y-1 text-[10px] opacity-90">
+                      <li>
+                        • Ticket: <span className="font-semibold">{wallet.taskId}</span>
+                      </li>
+                      <li>
+                        • Status:{" "}
+                        <span className="font-semibold">
+                          {wallet.status || "IN_PROGRESS"}
+                        </span>
+                      </li>
+                      <li>
+                        • Client: {wallet.clientName || "Demo client (FM / Landlord)"}
+                      </li>
+                      <li>
+                        • Building: {wallet.site || wallet.location || "Level39 – Canary Wharf"}
+                      </li>
+                      <li>
+                        • Created: {timeAgo(wallet.createdAt)}
+                      </li>
+                    </ul>
+                    <div className="nf-card-footer-text">
+                      All actions mirrored to client, engineer and FM dashboards in
+                      real time via Notfall Demo FakeAPI.
+                    </div>
+                  </>
+                )}
+
+                <div className="mt-3 flex items-center justify-between">
+                  <div className="nf-card-toggle">
+                    <button
+                      className={side === "front" ? "active" : ""}
+                      onClick={() => onSideChange("front")}
+                    >
+                      Front
+                    </button>
+                    <button
+                      className={side === "back" ? "active" : ""}
+                      onClick={() => onSideChange("back")}
+                    >
+                      Back
+                    </button>
+                  </div>
+                  <div className="nf-card-zoom-hint">
+                    Double-tap / double-click to zoom
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+  function WidgetMarketplaceModal({ open, onClose, catalog, installed, onAdd }) {
+  if (!open) return null;
+
+  return (
+    <div className="nf-card-overlay" onClick={onClose}>
+      <div className="nf-card-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-xs uppercase tracking-[0.22em] text-slate-200">
+              Widget marketplace
+            </div>
+            <div className="mt-1 text-[11px] text-slate-400">
+              Add operational widgets without breaking the layout.
+            </div>
+          </div>
+          <button className="nf-btn-ghost text-[11px]" onClick={onClose}>
+            Close
+          </button>
+        </div>
+
+        <div className="nf-divider" />
+
+        <div className="space-y-3 max-h-[60vh] overflow-auto pr-1">
+          {catalog.map((section) => (
+            <div key={section.id}>
+              <div className="text-[11px] text-slate-200 font-semibold">
+                {section.title}
+              </div>
+              <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2">
+                {section.items.map((w) => {
+                  const isInstalled = installed.includes(w.id);
+                  const locked = !!w.locked;
+                  return (
+                    <div
+                      key={w.id}
+                      className="rounded-2xl border border-slate-700/80 bg-slate-950/60 px-3 py-2"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <div className="text-[11px] font-semibold text-slate-100">
+                            {w.name}
+                          </div>
+                          <div className="mt-0.5 text-[10px] text-slate-400">
+                            {w.desc}
+                          </div>
+                          {locked && (
+                            <div className="mt-1 text-[10px] text-amber-300">
+                              Locked: {w.lockedReason}
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          className="nf-btn-primary text-[10px]"
+                          disabled={isInstalled || locked}
+                          onClick={() => onAdd(w.id)}
+                        >
+                          {isInstalled ? "Installed" : locked ? "Locked" : "Add"}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+
+            /* -------------------------------------------------------------------
+       * AssetRegistryWidget – Assets + PLC alerts (live via WebSocket)
+       * ------------------------------------------------------------------ */
+
+      function AssetRegistryWidget({ role }) {
+  // Map UI role → demo header for backend
+  const demoRoleHeader =
+    role === "client"
+      ? "CLIENT"
+      : role === "dao" || role === "admin"
+      ? "DAO_ADMIN"
+      : "ENGINEER";
+
+  const [assets, setAssets] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [selectedAssetId, setSelectedAssetId] = useState("ALL");
+  const [form, setForm] = useState({
+    name: "",
+    propertyCode: "",
+    assetType: "HVAC",
+    tag: "",
+    serial: "",
+    location: "",
+  });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  // NEW: track critical alerts we've already turned into tickets
+  const criticalHandledRef = useRef(new Set());
+  const wsRef = useRef(null);
+
+  // ---- helpers -----------------------------------------------------------
+
+  async function fetchJSON(path, options = {}) {
+    const headers = {
+      "Content-Type": "application/json",
+      "x-demo-role": demoRoleHeader,
+      ...(options.headers || {}),
+    };
+
+    const res = await fetch(path, {
+      method: options.method || "GET",
+      headers,
+      body:
+        options.body && typeof options.body !== "string"
+          ? JSON.stringify(options.body)
+          : options.body,
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(
+        `API ${res.status} ${res.statusText} - ${
+          text || "request failed"
+        } (${path})`
+      );
+    }
+
+    return res.status === 204 ? null : res.json();
+  }
+
+  // Build property list from assets (no JWT dependency)
+  const propertyOptions = useMemo(() => {
+    const map = new Map();
+    (assets || []).forEach((a) => {
+      const code = a.propertyCode || "UNASSIGNED";
+      const label = a.propertyName || code;
+      if (!map.has(code)) map.set(code, label);
+    });
+    return Array.from(map.entries()).map(([code, label]) => ({
+      code,
+      label,
+    }));
+  }, [assets]);
+
+  const filteredAlerts = useMemo(() => {
+    if (selectedAssetId === "ALL") return alerts || [];
+    return (alerts || []).filter((al) => {
+      const aId = al.assetId || (al.asset && al.asset._id);
+      return aId === selectedAssetId;
+    });
+  }, [alerts, selectedAssetId]);
+
+  // ---- auto-ticket creation for Critical PLC alerts ---------------------
+
+  async function maybeAutoCreateTicketFromAlert(alert) {
+    try {
+      if (!alert) return;
+
+      const sev = (alert.severity || alert.criticality || "")
+        .toString()
+        .toLowerCase();
+
+      // Only act on Critical alerts
+      if (sev !== "critical") return;
+
+      const id = alert._id || alert.id;
+      if (!id) return;
+
+      // Avoid duplicates on WS reconnects / alertUpdated events
+      if (criticalHandledRef.current.has(id)) return;
+      criticalHandledRef.current.add(id);
+
+      if (!api.createDemoTicket) {
+        console.warn("FakeAPI.createDemoTicket not available");
+        return;
+      }
+
+      const assetId =
+        alert.assetId || (alert.asset && alert.asset._id) || null;
+
+      const assetName =
+        (alert.asset && alert.asset.name) ||
+        (assets.find((a) => a._id === assetId)?.name) ||
+        "PLC asset";
+
+      const site =
+        alert.asset?.propertyCode ||
+        alert.siteCode ||
+        alert.site ||
+        "PLC_SITE";
+
+      const code = alert.code || alert.faultCode || "N/A";
+
+      const summary =
+        alert.message ||
+        alert.description ||
+        `Critical PLC alert (${code}) on ${assetName}`;
+
+      // Will hit /api/client/tickets because FakeAPI.API_BASE = "/api"
+      await api.createDemoTicket({
+        site,
+        summary,
+        priority: "Critical",
+        source: "PLC",
+        assetId,
+        plcAlertId: id,
+      });
+
+      // Mark alert locally as having a raised ticket
+      setAlerts((prev) =>
+        (prev || []).map((a) => {
+          const aId = a._id || a.id;
+          if (aId === id) {
+            return { ...a, ticketLinked: true };
+          }
+          return a;
+        })
+      );
+    } catch (err) {
+      console.warn("Auto ticket from PLC alert failed:", err);
+    }
+  }
+
+  // ---- initial load -----------------------------------------------------
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadInitial() {
+      setLoading(true);
+      setError("");
+      try {
+        const [assetData, alertData] = await Promise.all([
+          fetchJSON("/api/assets").catch((err) => {
+            console.warn("Asset load failed:", err.message);
+            return [];
+          }),
+          fetchJSON("/api/assets/plc-alerts").catch((err) => {
+            console.warn("PLC alert load failed:", err.message);
+            return [];
+          }),
+        ]);
+
+        if (cancelled) return;
+        setAssets(assetData || []);
+        setAlerts(alertData || []);
+      } catch (err) {
+        if (!cancelled) {
+          setError("Failed to load asset registry data");
+          console.warn(err);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    loadInitial();
+    return () => {
+      cancelled = true;
+    };
+  }, [demoRoleHeader]);
+
+  // ---- WebSocket subscription (asset + PLC topics) ----------------------
+
+  useEffect(() => {
+    const proto = window.location.protocol === "https:" ? "wss" : "ws";
+    const url = `${proto}://${window.location.host}/ws/widgets`;
+
+    const ws = new WebSocket(url);
+    wsRef.current = ws;
+
+    ws.onopen = () => {
+      ws.send(
+        JSON.stringify({
+          type: "subscribe",
+          topics: ["assetRegistry", "plcAlert"],
+        })
+      );
+    };
+
+    ws.onmessage = (evt) => {
+      try {
+        const msg = JSON.parse(evt.data);
+        if (!msg || !msg.topic) return;
+
+        if (msg.topic === "assetRegistry") {
+          if (msg.action === "assetCreated" && msg.asset) {
+            setAssets((prev) => [msg.asset, ...(prev || [])]);
+          }
+          if (msg.action === "assetUpdated" && msg.asset) {
+            setAssets((prev) =>
+              (prev || []).map((a) =>
+                a._id === msg.asset._id ? msg.asset : a
+              )
+            );
+          }
+        }
+
+        if (msg.topic === "plcAlert") {
+          if (msg.action === "newAlert" && msg.alert) {
+            setAlerts((prev) => [msg.alert, ...(prev || [])]);
+
+            // auto ticket creation for critical alerts
+            maybeAutoCreateTicketFromAlert(msg.alert);
+          }
+
+          if (msg.action === "alertUpdated" && msg.alert) {
+            setAlerts((prev) =>
+              (prev || []).map((a) =>
+                a._id === msg.alert._id ? msg.alert : a
+              )
+            );
+
+            // severity might change to Critical later
+            maybeAutoCreateTicketFromAlert(msg.alert);
+          }
+        }
+      } catch (err) {
+        console.warn("WS parse error:", err);
+      }
+    };
+
+    ws.onerror = (err) => {
+      console.warn("WS error in AssetRegistryWidget:", err);
+    };
+
+    return () => {
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, []); // once on mount
+
+  // ---- form handlers ----------------------------------------------------
+
+  function handleChange(e) {
+    const { name, value } = e.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }
+
+  async function handleCreateAsset(e) {
+    e.preventDefault();
+    setLoading(true);
+    setError("");
+    try {
+      const payload = {
+        name: form.name,
+        propertyCode: form.propertyCode || undefined,
+        assetType: form.assetType || "HVAC",
+        tag: form.tag || undefined,
+        serial: form.serial || undefined,
+        location: form.location || undefined,
+      };
+
+      const created = await fetchJSON("/api/assets", {
+        method: "POST",
+        body: payload,
+      });
+
+      // backend also broadcasts via widgetBus, but this keeps UI snappy
+      if (created) {
+        setAssets((prev) => [created, ...(prev || [])]);
+      }
+
+      setForm({
+        name: "",
+        propertyCode: "",
+        assetType: "HVAC",
+        tag: "",
+        serial: "",
+        location: "",
+      });
+    } catch (err) {
+      console.warn(err);
+      setError("Failed to create asset");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  // ---- render -----------------------------------------------------------
+
+  return (
+    <div className="nf-panel-widget h-full flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <div className="text-xs uppercase tracking-[0.18em] text-slate-300">
+            Asset registry
+          </div>
+          <div className="text-[11px] text-slate-400">
+            Properties, assets & PLC alerts
+          </div>
+        </div>
+        <div className="nf-pill text-[10px]">
+          <span className="nf-dot" />
+          <span>Live widgets</span>
+        </div>
+      </div>
+
+      {error && (
+        <div className="text-[11px] text-rose-300 bg-rose-950/40 border border-rose-500/60 rounded-xl px-3 py-2">
+          {error}
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-1">
+        {/* Left: asset list + creation form */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2 mb-1">
+            <select
+              className="nf-input text-[11px] max-w-[180px]"
+              value={selectedAssetId}
+              onChange={(e) => setSelectedAssetId(e.target.value)}
+            >
+              <option value="ALL">All assets</option>
+              {assets.map((a) => (
+                <option key={a._id} value={a._id}>
+                  {a.name || "Asset"} · {a.propertyCode || "UNASSIGNED"}
+                </option>
+              ))}
+            </select>
+            <span className="text-[11px] text-slate-400">
+              {assets.length} assets
+            </span>
+          </div>
+
+          <div className="space-y-1.5 max-h-[220px] overflow-y-auto pr-1">
+            {loading && assets.length === 0 ? (
+              <>
+                <Skeleton className="h-8 rounded-xl" />
+                <Skeleton className="h-8 rounded-xl" />
+                <Skeleton className="h-8 rounded-xl" />
+              </>
+            ) : assets.length === 0 ? (
+              <div className="text-[11px] text-slate-400">
+                No assets registered yet. Add one below.
+              </div>
+            ) : (
+              assets.map((a) => (
+                <button
+                  key={a._id}
+                  type="button"
+                  onClick={() => setSelectedAssetId(a._id)}
+                  className={`w-full text-left text-[11px] px-2.5 py-1.5 rounded-xl border ${
+                    selectedAssetId === a._id
+                      ? "border-sky-400/90 bg-sky-900/40"
+                      : "border-slate-700/80 bg-slate-900/40 hover:border-slate-400/70"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium text-slate-100">
+                      {a.name || "Asset"}
+                    </span>
+                    <span className="text-[10px] text-slate-400">
+                      {a.assetType || "Unknown"}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">
+                    {a.propertyCode || "No property"} ·{" "}
+                    {a.location || a.tag || "No location"}
+                  </div>
+                </button>
+              ))
+            )}
+          </div>
+
+          {/* small asset creation form */}
+          <form
+            onSubmit={handleCreateAsset}
+            className="mt-1 border border-slate-700/80 rounded-2xl px-3 py-2.5 space-y-1.5 bg-slate-950/60"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[11px] text-slate-300 font-medium">
+                Add asset (demo)
+              </span>
+              <span className="text-[10px] text-slate-500">
+                Linked to client/FM
+              </span>
+            </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <input
+                name="name"
+                value={form.name}
+                onChange={handleChange}
+                placeholder="Asset name"
+                className="nf-input text-[11px] py-1.5"
+              />
+              <input
+                name="propertyCode"
+                value={form.propertyCode}
+                onChange={handleChange}
+                placeholder="Property code"
+                className="nf-input text-[11px] py-1.5"
+              />
+              <select
+                name="assetType"
+                value={form.assetType}
+                onChange={handleChange}
+                className="nf-input text-[11px] py-1.5"
+              >
+                <option>HVAC</option>
+                <option>Boiler</option>
+                <option>Electrical</option>
+                <option>Lift</option>
+                <option>Fire</option>
+                <option>BMS</option>
+              </select>
+              <input
+                name="tag"
+                value={form.tag}
+                onChange={handleChange}
+                placeholder="Tag (AHU-01)"
+                className="nf-input text-[11px] py-1.5"
+              />
+              <input
+                name="serial"
+                value={form.serial}
+                onChange={handleChange}
+                placeholder="Serial"
+                className="nf-input text-[11px] py-1.5"
+              />
+              <input
+                name="location"
+                value={form.location}
+                onChange={handleChange}
+                placeholder="Location"
+                className="nf-input text-[11px] py-1.5"
+              />
+            </div>
+            <div className="flex items-center justify-between mt-1.5">
+              <button
+                type="submit"
+                className="nf-btn-primary text-[11px] px-3 py-1.5"
+                disabled={loading || !form.name}
+              >
+                Register asset
+              </button>
+              <span className="text-[10px] text-slate-500">
+                Feeds PLC alerts & tickets
+              </span>
+            </div>
+          </form>
+        </div>
+
+        {/* Right: PLC alerts */}
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between gap-2 mb-1">
+            <div className="flex items-center gap-2">
+              <span className="nf-live-chip text-[10px]">
+                <span className="nf-dot" />
+                <span>PLC alert stream</span>
+              </span>
+              <span className="text-[10px] text-slate-400">
+                {alerts.length} alerts
+              </span>
+            </div>
+          </div>
+
+          <div className="space-y-1.5 max-h-[260px] overflow-y-auto pr-1">
+            {filteredAlerts.length === 0 ? (
+              <div className="text-[11px] text-slate-400">
+                No PLC alerts for this filter yet.
+              </div>
+            ) : (
+              filteredAlerts.map((al) => {
+                const sev = (al.severity || al.criticality || "info")
+                  .toString()
+                  .toLowerCase();
+                const isCritical = sev === "critical";
+                const assetName =
+                  al.asset?.name ||
+                  assets.find(
+                    (a) =>
+                      a._id === al.assetId ||
+                      a._id === (al.asset && al.asset._id)
+                  )?.name ||
+                  "Asset";
+
+                return (
+                  <div
+                    key={al._id || al.id}
+                    className={`rounded-2xl border px-2.5 py-2 text-[11px] ${
+                      isCritical
+                        ? "border-rose-500/80 bg-rose-950/40"
+                        : "border-amber-400/80 bg-slate-900/50"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-semibold text-slate-100">
+                        {assetName}
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        {al.ticketLinked && (
+                          <span className="text-emerald-300 text-[9px] uppercase tracking-[0.14em]">
+                            Ticket raised
+                          </span>
+                        )}
+                        <span
+                          className={`nf-status-badge ${
+                            isCritical
+                              ? "nf-status-rejected"
+                              : "nf-status-pending"
+                          }`}
+                        >
+                          {(al.severity || "alert").toString()}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="mt-0.5 text-slate-200">
+                      {al.message ||
+                        al.description ||
+                        "PLC alert from monitored asset."}
+                    </div>
+                    <div className="mt-1 flex items-center justify-between text-slate-400">
+                      <span>
+                        Code:{" "}
+                        <span className="text-slate-200 font-mono">
+                          {al.code || al.faultCode || "N/A"}
+                        </span>
+                        {al.ticketLinked && (
+                          <span className="ml-2 text-emerald-300 text-[9px] uppercase tracking-[0.14em]">
+                            • Ticket raised
+                          </span>
+                        )}
+                      </span>
+                      <span>
+                        {timeAgo(
+                          al.createdAt ||
+                            al.timestamp ||
+                            new Date().toISOString()
+                        )}
+                      </span>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// PLC Engineer Console Widget
+// ---------------------------------------------------------------------------
+
+function PlcEngineerConsoleWidget() {
+  const [alerts, setAlerts] = React.useState([]);           // PLC alerts (from /api/assets/plc-alerts)
+  const [linkedTickets, setLinkedTickets] = React.useState({}); // alertId -> { ticketId, status, assignedEngineerId }
+  const [lastEventAt, setLastEventAt] = React.useState(null);
+  const [busy, setBusy] = React.useState(false);
+
+  // helper: mark an alert as NEW for a short period
+  function markAlertNew(alertId) {
+    setAlerts((prev) =>
+      prev.map((a) =>
+        a._id === alertId ? { ...a, _isNew: true, _newAt: Date.now() } : a
+      )
+    );
+  }
+
+  // on mount: initial load from real backend via FakeAPI → assets/plc-alerts
+  React.useEffect(() => {
+    let cancelled = false;
+
+    async function bootstrap() {
+      try {
+        setBusy(true);
+        const [assets, plcAlerts] = await Promise.all([
+          FakeAPI.getAssets().catch(() => []),
+          FakeAPI.getPlcAlerts().catch(() => []),
+        ]);
+
+        if (cancelled) return;
+
+        // enrich alerts with asset info
+        const assetMap = {};
+        (assets || []).forEach((a) => {
+          assetMap[a._id] = a;
+        });
+
+        const enriched = (plcAlerts || []).map((alert) => {
+          const asset = assetMap[alert.assetId] || {};
+          return {
+            ...alert,
+            assetName: asset.name || asset.assetName || "Unknown asset",
+            siteName: asset.siteName || asset.siteCode || "Unknown site",
+          };
+        });
+
+        setAlerts(enriched);
+      } catch (err) {
+        console.warn("PLC Engineer Console bootstrap failed:", err.message);
+      } finally {
+        if (!cancelled) setBusy(false);
+      }
+    }
+
+    bootstrap();
+
+    // periodic refresh of "NEW" flag
+    const interval = setInterval(() => {
+      setAlerts((prev) =>
+        prev.map((a) => {
+          if (!a._isNew || !a._newAt) return a;
+          // clear NEW after 60 seconds
+          if (Date.now() - a._newAt > 60_000) {
+            const { _isNew, _newAt, ...rest } = a;
+            return rest;
+          }
+          return a;
+        })
+      );
+    }, 5000);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  // subscribe to WebSocket topics: plcAlert + ticket
+  React.useEffect(() => {
+    const ws = window.widgetSocket;
+    if (!ws) {
+      console.warn("PLC Engineer Console: widgetSocket not found on window");
+      return;
+    }
+
+    function handleMessage(ev) {
+      let data;
+      try {
+        data = JSON.parse(ev.data);
+      } catch {
+        return;
+      }
+      if (!data || !data.topic) return;
+
+      // 1) PLC alerts streaming in
+      if (data.topic === "plcAlert") {
+        setLastEventAt(new Date().toISOString());
+        setAlerts((prev) => {
+          const exists = prev.find((a) => a._id === data.alertId);
+          const base = {
+            _id: data.alertId,
+            assetId: data.assetId,
+            assetName: data.assetName || "Unknown asset",
+            siteName: data.siteName || "Unknown site",
+            severity: data.severity,
+            code: data.code,
+            message: data.message,
+            createdAt: data.createdAt || new Date().toISOString(),
+            source: "PLC",
+          };
+          if (exists) {
+            // update existing
+            return prev.map((a) =>
+              a._id === data.alertId ? { ...a, ...base, _isNew: true, _newAt: Date.now() } : a
+            );
+          }
+          // new alert at the top
+          return [{ ...base, _isNew: true, _newAt: Date.now() }, ...prev];
+        });
+      }
+
+      // 2) Tickets created / updated – link them back to PLC alerts
+      if (data.topic === "ticket" && data.source === "PLC") {
+        setLastEventAt(new Date().toISOString());
+
+        // data might contain alertId or assetId to link back
+        const alertId = data.alertId;
+        if (alertId) {
+          setLinkedTickets((prev) => ({
+            ...prev,
+            [alertId]: {
+              ticketId: data.ticketId,
+              status: data.action === "assigned" ? "ASSIGNED" : "OPEN",
+              engineerId: data.engineerId || null,
+            },
+          }));
+        }
+      }
+    }
+
+    ws.addEventListener("message", handleMessage);
+    return () => ws.removeEventListener("message", handleMessage);
+  }, []);
+
+  async function handleManualRefresh() {
+    try {
+      setBusy(true);
+      const [assets, plcAlerts] = await Promise.all([
+        FakeAPI.getAssets().catch(() => []),
+        FakeAPI.getPlcAlerts().catch(() => []),
+      ]);
+
+      const assetMap = {};
+      (assets || []).forEach((a) => {
+        assetMap[a._id] = a;
+      });
+
+      const enriched = (plcAlerts || []).map((alert) => {
+        const asset = assetMap[alert.assetId] || {};
+        return {
+          ...alert,
+          assetName: asset.name || asset.assetName || "Unknown asset",
+          siteName: asset.siteName || asset.siteCode || "Unknown site",
+        };
+      });
+
+      setAlerts(enriched);
+    } catch (err) {
+      console.warn("PLC Engineer Console manual refresh failed:", err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="nf-panel-widget h-full flex flex-col">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <div className="text-xs uppercase tracking-[0.22em] text-slate-300">
+            PLC Engineer Console
+          </div>
+          <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
+            <span className="nf-live-chip">
+              <span className="nf-dot" />
+              PLC alerts → Assets → Tickets → Engineers
+            </span>
+            {lastEventAt && (
+              <span className="text-[10px] text-slate-500">
+                Last event {timeAgo(lastEventAt)}
+              </span>
+            )}
+          </div>
+        </div>
+        <button
+          className="nf-btn-ghost text-[11px]"
+          disabled={busy}
+          onClick={handleManualRefresh}
+        >
+          {busy ? "Refreshing…" : "Refresh"}
+        </button>
+      </div>
+
+      <div className="nf-divider" />
+
+      <div className="mt-1 flex-1 overflow-auto pr-1 space-y-2">
+        {alerts.length === 0 && (
+          <div className="text-xs text-slate-400">
+            No PLC alerts yet. When a chiller or plant fault is detected,
+            alerts will appear here and be linked to Notfall tickets.
+          </div>
+        )}
+
+        {alerts.map((alert) => {
+          const link = linkedTickets[alert._id] || null;
+          const isNew = alert._isNew;
+
+          return (
+            <div
+              key={alert._id}
+              className={
+                "nf-task-card nf-task-card-sm " +
+                (isNew ? "nf-task-card-new" : "")
+              }
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <div className="flex items-center gap-2 text-[11px]">
+                    <span className="font-semibold">
+                      {alert.assetName || "PLC Asset"}
+                    </span>
+                    <StatusBadge status={alert.severity || "CRITICAL"} />
+                    {isNew && (
+                      <span className="nf-pill nf-pill-beta text-[9px]">
+                        NEW
+                      </span>
+                    )}
+                  </div>
+                  <div className="mt-1 text-[13px] font-semibold">
+                    {alert.message || "Chiller fault"}
+                  </div>
+                  <div className="mt-0.5 text-[11px] text-slate-300">
+                    {alert.siteName || "Unknown site"} · Code {alert.code}
+                  </div>
+                  <div className="mt-0.5 text-[10px] text-slate-400 flex gap-3">
+                    <span>Source: PLC</span>
+                    <span>Created {timeAgo(alert.createdAt)}</span>
+                  </div>
+                </div>
+                <div className="text-right text-[10px] text-slate-300">
+                  {link ? (
+                    <>
+                      <div className="font-semibold">
+                        Ticket #{link.ticketId.slice(-6)}
+                      </div>
+                      <div className="mt-0.5">
+                        Status:{" "}
+                        {link.status === "ASSIGNED"
+                          ? "Assigned"
+                          : "Open (matching)"}
+                      </div>
+                      {link.engineerId && (
+                        <div className="mt-0.5">
+                          Engineer: {link.engineerId.slice(0, 8)}…
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-slate-500">
+                      Ticket is being created / matched…
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {link && (
+                <div className="nf-job-wallet-strip mt-2">
+                  <div className="flex items-center gap-2">
+                    <span className="nf-job-wallet-tag text-[9px]">
+                      Ticket raised
+                    </span>
+                    <span className="text-[10px]">
+                      This PLC fault has opened a Notfall ticket and is now
+                      visible to matched engineers only.
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+
+
+      /* -------------------------------------------------------------------
+       * Engineer – Task Inbox + Wallet + Earnings
+       * ------------------------------------------------------------------ */
+
+  function EngineerTaskInbox({ tasks, onRefresh, onSelectTask, busy, api, widgetSocket }) {
+  const [newIds, setNewIds] = React.useState(() => new Set());
+
+  React.useEffect(() => {
+    if (!widgetSocket) return;
+
+    const onMsg = async (evt) => {
+      try {
+        const msg = JSON.parse(evt.data);
+
+        // expected message shape: { topic, action, payload, recipients? }
+        const { topic, action, payload } = msg || {};
+
+        // ✅ primary: engineer receives targeted offer
+        if (topic === "task" && action === "offered") {
+          // payload should already be “engineer friendly”
+          // { id, title, location, trade, severity, createdAt, slaHours, etaMinutes, hasJobWallet, walletAmount }
+          setNewIds((prev) => new Set(prev).add(payload.id || payload.workflowId));
+          onRefresh?.(); // simplest: refresh from API
+          return;
+        }
+
+        // Optional: if you also broadcast ticket.created globally (not recommended for engineers),
+        // only use it if payload says this engineer is eligible.
+        if (topic === "ticket" && action === "created" && payload?.eligible === true) {
+          setNewIds((prev) => new Set(prev).add(payload.id));
+          onRefresh?.();
+          return;
+        }
+
+        // when accepted, you can remove NEW state
+        if (topic === "task" && (action === "accepted" || action === "assigned")) {
+          const id = payload?.id;
+          if (id) {
+            setNewIds((prev) => {
+              const next = new Set(prev);
+              next.delete(id);
+              return next;
+            });
+          }
+        }
+      } catch {
+        // ignore
+      }
+    };
+
+    widgetSocket.addEventListener("message", onMsg);
+    return () => widgetSocket.removeEventListener("message", onMsg);
+  }, [widgetSocket, onRefresh]);
+
+  return (
+    <div className="nf-panel-widget h-full flex flex-col">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <div className="text-xs uppercase tracking-[0.22em] text-slate-300">
+            Task Inbox
+          </div>
+          <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-400">
+            <span className="nf-live-chip">
+              <span className="nf-dot" />
+              Live feed from Notfall workflow
+            </span>
+          </div>
+        </div>
+        <button
+          className="nf-btn-ghost text-[11px]"
+          disabled={busy}
+          onClick={onRefresh}
+        >
+          {busy ? "Refreshing…" : "Refresh"}
+        </button>
+      </div>
+
+      <div className="nf-divider" />
+
+      <div className="mt-1 flex-1 overflow-auto pr-1">
+        {!tasks && (
+          <>
+            <Skeleton className="h-14 rounded mb-2" />
+            <Skeleton className="h-14 rounded mb-2" />
+            <Skeleton className="h-14 rounded" />
+          </>
+        )}
+
+        {tasks && tasks.length === 0 && (
+          <div className="text-xs text-slate-400">
+            No open tickets. When clients raise faults, matched offers will appear here in real time.
+          </div>
+        )}
+
+        {tasks &&
+          tasks.map((t, idx) => {
+            const id = t.id || t.workflowId || `${idx}`;
+            const isNew = newIds.has(id);
+
+            return (
+              <div
+                key={id}
+                className={
+                  "nf-task-card cursor-pointer " +
+                  (idx === 0 ? "nf-task-card-new" : "") +
+                  (isNew ? " ring-2 ring-emerald-400/60 shadow-[0_0_22px_rgba(34,197,94,0.55)]" : "")
+                }
+                onClick={() => {
+                  // once opened, remove NEW pill
+                  if (isNew) {
+                    setNewIds((prev) => {
+                      const next = new Set(prev);
+                      next.delete(id);
+                      return next;
+                    });
+                  }
+                  onSelectTask(t);
+                }}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2 text-[11px]">
+                      <span className="font-semibold">{id}</span>
+                      <StatusBadge status={t.status} />
+                      {isNew && (
+                        <span className="nf-pill" style={{ borderColor: "rgba(34,197,94,0.9)" }}>
+                          <span className="nf-circle-small active" />
+                          NEW
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-1 text-[13px] font-semibold">{t.title}</div>
+                    <div className="mt-0.5 text-[11px] text-slate-300">{t.location}</div>
+
+                    <div className="mt-0.5 text-[10px] text-slate-400 flex gap-3">
+                      <span>{t.trade || "Multi-trade"}</span>
+                      <span>Severity: {t.severity || "Medium"}</span>
+                      <span>Created {timeAgo(t.createdAt)}</span>
+                    </div>
+                  </div>
+
+                  <div className="text-right text-[10px] text-slate-300">
+                    <div>
+                      SLA: {(t.slaHours || 2) + "h"} · ETA {(t.etaMinutes || 30) + "m"}
+                    </div>
+                  </div>
+                </div>
+
+                {t.hasJobWallet && (
+                  <div className="nf-job-wallet-strip mt-2">
+                    <div className="flex items-center gap-2">
+                      <span className="nf-job-wallet-tag">Job wallet ready</span>
+                      <span className="text-[10px]">
+                        £{t.walletAmount || 200} buffer reserved by client
+                      </span>
+                    </div>
+                    <div className="text-[10px] opacity-90">
+                      Tap “Job Wallet” widget to view card
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+      </div>
+    </div>
+  );
+}
+
+
+
+      function EngineerEarningsWidget({
+        wallets,
+        selectedWallet,
+        onSelectWallet,
+        onCardZoom,
+      }) {
+        const total = useMemo(() => {
+          if (!wallets) return 0;
+          return wallets.reduce((acc, w) => acc + (w.amount || 0), 0);
+        }, [wallets]);
+
+        const activeCount = wallets ? wallets.length : 0;
+
+        return (
+          <div className="nf-panel-widget h-full flex flex-col">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs uppercase tracking-[0.22em] text-slate-300">
+                  Earnings & Job Wallet
+                </div>
+                <div className="mt-1 text-[11px] text-slate-400">
+                  Revolut-style wallet, wired into FakeAPI engineer payouts.
+                </div>
+              </div>
+              <div className="nf-earn-tabs text-[11px]">
+                <button className="nf-earn-tab-btn active">Week</button>
+                <button className="nf-earn-tab-btn">Month</button>
+                <button className="nf-earn-tab-btn">Year</button>
+              </div>
+            </div>
+
+            <div className="nf-earn-kpi-grid">
+              <div className="nf-earn-kpi-card">
+                <div className="text-[10px] text-slate-300">Active wallets</div>
+                <div className="mt-1 text-[18px] font-semibold">
+                  {wallets ? activeCount : <Skeleton className="h-4 w-10" />}
+                </div>
+                <div className="mt-1 text-[10px] text-slate-400">
+                  Tickets with deposits pre-authorised
+                </div>
+              </div>
+              <div className="nf-earn-kpi-card">
+                <div className="text-[10px] text-slate-300">
+                  Wallet buffer (GBP)
+                </div>
+                <div className="mt-1 text-[18px] font-semibold">
+                  {wallets ? (
+                    <>£{total.toFixed(0)}</>
+                  ) : (
+                    <Skeleton className="h-4 w-16" />
+                  )}
+                </div>
+                <div className="mt-1 text-[10px] text-slate-400">
+                  First £200 per job protected
+                </div>
+              </div>
+              <div className="nf-earn-kpi-card">
+                <div className="text-[10px] text-slate-300">
+                  Completed this week
+                </div>
+                <div className="mt-1 text-[18px] font-semibold">
+                  {wallets ? 3 : <Skeleton className="h-4 w-8" />}
+                </div>
+                <div className="mt-1 text-[10px] text-slate-400">
+                  Demo KPI from FakeAPI
+                </div>
+              </div>
+              <div className="nf-earn-kpi-card">
+                <div className="text-[10px] text-slate-300">Rating</div>
+                <div className="mt-1 text-[18px] font-semibold">
+                  {wallets ? "4.9" : <Skeleton className="h-4 w-8" />}
+                </div>
+                <div className="mt-1 text-[10px] text-slate-400">
+                  Client feedback synced cross-dashboard
+                </div>
+              </div>
+            </div>
+
+            <div className="nf-earn-chart-shell mt-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] text-slate-200">
+                  Earnings trend (demo)
+                </span>
+                <div className="nf-earn-range-tabs">
+                  <button className="nf-earn-range-btn active">7d</button>
+                  <button className="nf-earn-range-btn">30d</button>
+                  <button className="nf-earn-range-btn">90d</button>
+                </div>
+              </div>
+              <div className="mt-2 h-16 rounded-xl bg-slate-900/60 border border-slate-700/80 flex items-end gap-1 px-2 pb-1">
+                {Array.from({ length: 14 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="flex-1 rounded-full bg-gradient-to-t from-slate-700 to-sky-400/80"
+                    style={{
+                      height: `${20 + (i % 5) * 10}%`,
+                      opacity: 0.5 + (i % 3) * 0.15,
+                    }}
+                  />
+                ))}
+              </div>
+              <div className="nf-earn-chart-labels">
+                <span>Last jobs</span>
+                <span className="text-right">
+                  Demo chart. Real system will use live payouts and Completion
+                  logs.
+                </span>
+              </div>
+            </div>
+
+            <div className="nf-jobwallet-layout mt-3">
+              <div className="nf-jobwallet-list">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] text-slate-200">
+                    Job wallets
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    Click to preview card
+                  </span>
+                </div>
+                <div className="space-y-1.5">
+                  {!wallets && (
+                    <>
+                      <Skeleton className="h-9 rounded" />
+                      <Skeleton className="h-9 rounded" />
+                    </>
+                  )}
+                  {wallets &&
+                    wallets.map((w) => {
+                      const active =
+                        selectedWallet &&
+                        (selectedWallet.taskId === w.taskId ||
+                          selectedWallet.id === w.id);
+                      return (
+                        <button
+                          key={w.taskId || w.id}
+                          className={
+                            "nf-earn-jobwallet-row text-left " +
+                            (active ? "nf-earn-jobwallet-row-active" : "")
+                          }
+                          onClick={() => onSelectWallet(w)}
+                        >
+                          <div>
+                            <div className="nf-earn-jobwallet-row-title">
+                              {w.title}
+                            </div>
+                            <div className="nf-earn-jobwallet-row-meta">
+                              {w.trade || "Multi-trade"} ·{" "}
+                              {timeAgo(w.createdAt)}
+                            </div>
+                          </div>
+                          <div className="nf-earn-jobwallet-row-kpi">
+                            <div className="font-semibold">
+                              £{w.amount || 200}
+                            </div>
+                            <div className="text-[10px] opacity-80">
+                              {w.provider || "Revolut Business"}
+                            </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                </div>
+              </div>
+              <div className="nf-jobwallet-selected">
+                {selectedWallet ? (
+                  <JobWalletCard
+                    wallet={selectedWallet}
+                    side={selectedWallet.side || "front"}
+                    onSideChange={(side) =>
+                      onSelectWallet({ ...selectedWallet, side })
+                    }
+                    onDoubleClick={onCardZoom}
+                  />
+                ) : (
+                  <div className="text-[11px] text-slate-400 text-center max-w-xs">
+                    Select a job wallet on the left to preview the{" "}
+                    <span className="font-semibold">Notfall x Revolut</span>{" "}
+                    digital card. In the live app, this syncs with client and
+                    FM views.
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      /* -------------------------------------------------------------------
+       * Engineer Profile + DAO status widget
+       * ------------------------------------------------------------------ */
+
+      function EngineerProfileWidget() {
+        const [profile, setProfile] = useState(null);
+        const [daoStatus, setDaoStatus] = useState(null);
+        const [loading, setLoading] = useState(true);
+        const [saving, setSaving] = useState(false);
+        const [submitting, setSubmitting] = useState(false);
+        const [error, setError] = useState("");
+
+        useEffect(() => {
+          let mounted = true;
+          async function load() {
+            try {
+              setLoading(true);
+              const [p, d] = await Promise.all([
+                api.getEngineerProfile(),
+                api.getDAOStatus(),
+              ]);
+              if (!mounted) return;
+              setProfile(p);
+              setDaoStatus(d);
+            } catch (err) {
+              console.error(err);
+              if (mounted) setError(err.message || "Failed to load profile");
+            } finally {
+              if (mounted) setLoading(false);
+            }
+          }
+          load();
+          return () => {
+            mounted = false;
+          };
+        }, []);
+
+        function handleChange(field, value) {
+          setProfile((prev) => ({ ...(prev || {}), [field]: value }));
+        }
+
+        async function handleSave() {
+          if (!profile) return;
+          setSaving(true);
+          setError("");
+          try {
+            const updated = await api.saveEngineerProfile(profile);
+            setProfile(updated);
+          } catch (err) {
+            console.error(err);
+            setError(err.message || "Failed to save profile");
+          } finally {
+            setSaving(false);
+          }
+        }
+
+        async function handleSubmit() {
+          setSubmitting(true);
+          setError("");
+          try {
+            const res = await api.submitProfileToDAO();
+            const status = await api.getDAOStatus();
+            setDaoStatus(status);
+          } catch (err) {
+            console.error(err);
+            setError(err.message || "Failed to submit to DAO");
+          } finally {
+            setSubmitting(false);
+          }
+        }
+
+        const currentStatus = (daoStatus && daoStatus.status) || "NOT_SUBMITTED";
+
+        return (
+          <div className="nf-panel-widget h-full flex flex-col">
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xs uppercase tracking-[0.22em] text-slate-300">
+                  Engineer profile & DAO onboarding
+                </div>
+                <div className="mt-1 text-[11px] text-slate-400">
+                  This drives which tasks the engineer sees in the marketplace.
+                </div>
+              </div>
+              <div>
+                <StatusBadge status={currentStatus} />
+              </div>
+            </div>
+
+            <div className="nf-divider" />
+
+            {error && (
+              <div className="mb-2 text-[11px] text-red-400">{error}</div>
+            )}
+
+            {loading && (
+              <div className="space-y-2">
+                <Skeleton className="h-8 rounded" />
+                <Skeleton className="h-8 rounded" />
+                <Skeleton className="h-20 rounded" />
+              </div>
+            )}
+
+            {!loading && profile && (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <Field label="Name">
+                    <input
+                      className="nf-input"
+                      type="text"
+                      value={profile.name || ""}
+                      onChange={(e) => handleChange("name", e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Primary trade">
+                    <input
+                      className="nf-input"
+                      type="text"
+                      value={profile.primaryTrade || ""}
+                      onChange={(e) =>
+                        handleChange("primaryTrade", e.target.value)
+                      }
+                      placeholder="HVAC / Plumbing / Electrical"
+                    />
+                  </Field>
+                  <Field label="Base city">
+                    <input
+                      className="nf-input"
+                      type="text"
+                      value={profile.city || ""}
+                      onChange={(e) => handleChange("city", e.target.value)}
+                      placeholder="London / Johannesburg / Bucharest"
+                    />
+                  </Field>
+                  <Field label="Hourly rate (GBP)">
+                    <input
+                      className="nf-input"
+                      type="number"
+                      value={profile.rate || ""}
+                      onChange={(e) =>
+                        handleChange("rate", Number(e.target.value) || 0)
+                      }
+                      placeholder="65"
+                    />
+                  </Field>
+                </div>
+
+                <Field label="About / Certifications summary">
+                  <textarea
+                    className="nf-input"
+                    value={profile.bio || ""}
+                    onChange={(e) => handleChange("bio", e.target.value)}
+                    placeholder="e.g. Gas Safe, F-Gas, NICEIC. 10+ years in FM. Uploads are handled in the full app."
+                  />
+                </Field>
+
+                <div className="flex items-center justify-between mt-1">
+                  <div className="text-[11px] text-slate-400 max-w-sm">
+                    In the full system, certifications, insurance and ID
+                    uploads are hashed to chain and surfaced to FM/clients via
+                    this profile.
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      className="nf-btn-ghost text-[11px]"
+                      onClick={handleSave}
+                      disabled={saving}
+                    >
+                      {saving ? "Saving…" : "Save profile"}
+                    </button>
+                    <button
+                      className="nf-btn-primary text-[11px]"
+                      onClick={handleSubmit}
+                      disabled={
+                        submitting ||
+                        currentStatus === "APPROVED" ||
+                        currentStatus === "PENDING"
+                      }
+                    >
+                      {submitting
+                        ? "Submitting…"
+                        : currentStatus === "NOT_SUBMITTED"
+                        ? "Submit to DAO"
+                        : currentStatus === "REJECTED"
+                        ? "Resubmit"
+                        : "Awaiting review"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      /* -------------------------------------------------------------------
+       * Client / FM side – ticket creation & list
+       * ------------------------------------------------------------------ */
+
+      function ClientTicketWidget() {
+        const [tickets, setTickets] = useState(null);
+        const [loading, setLoading] = useState(true);
+        const [submitting, setSubmitting] = useState(false);
+        const [error, setError] = useState("");
+
+        const [form, setForm] = useState({
+          site: "Level39 – 1 Canada Square",
+          summary: "Emergency boiler leak – reception zone",
+          priority: "High",
+          deposit: 200,
+        });
+
+        useEffect(() => {
+          let mounted = true;
+          async function load() {
+            try {
+              setLoading(true);
+              const list = await api.getClientTickets();
+              if (!mounted) return;
+              setTickets(list);
+            } catch (err) {
+              console.error(err);
+              if (mounted) setError(err.message || "Failed to load tickets");
+            } finally {
+              if (mounted) setLoading(false);
+            }
+          }
+          load();
+          return () => {
+            mounted = false;
+          };
+        }, []);
+
+        async function handleSubmit(e) {
+          e.preventDefault();
+          setSubmitting(true);
+          setError("");
+          try {
+            const created = await api.createDemoTicket(form);
+            // Re-fetch list to show mirrored state (client → engineer)
+            const list = await api.getClientTickets();
+            setTickets(list);
+          } catch (err) {
+            console.error(err);
+            setError(err.message || "Failed to create ticket");
+          } finally {
+            setSubmitting(false);
+          }
+        }
+
+        function handleChange(field, value) {
+          setForm((prev) => ({ ...prev, [field]: value }));
+        }
+
+        return (
+          <div className="nf-panel-widget h-full flex flex-col">
+            <div className="flex items-center justify-between mb-1">
+              <div>
+                <div className="text-xs uppercase tracking-[0.22em] text-slate-300">
+                  Client / FM Tickets
+                </div>
+                <div className="mt-1 text-[11px] text-slate-400">
+                  What the landlord / FM sees when raising jobs into the
+                  marketplace.
+                </div>
+              </div>
+              <span className="nf-pill text-[10px]">
+                <span className="nf-dot" /> Syncs with engineer inbox + wallets
+              </span>
+            </div>
+
+            <div className="nf-divider" />
+
+            {error && (
+              <div className="mb-2 text-[11px] text-red-400">{error}</div>
+            )}
+
+            <div className="grid grid-cols-12 gap-3 flex-1 min-h-[220px]">
+              <div className="col-span-12 md:col-span-5 flex flex-col">
+                <form onSubmit={handleSubmit} className="space-y-3">
+                  <Field label="Site / property">
+                    <input
+                      className="nf-input"
+                      value={form.site}
+                      onChange={(e) => handleChange("site", e.target.value)}
+                    />
+                  </Field>
+                  <Field label="Summary of issue">
+                    <input
+                      className="nf-input"
+                      value={form.summary}
+                      onChange={(e) =>
+                        handleChange("summary", e.target.value)
+                      }
+                    />
+                  </Field>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Field label="Priority">
+                      <select
+                        className="nf-input"
+                        value={form.priority}
+                        onChange={(e) =>
+                          handleChange("priority", e.target.value)
+                        }
+                      >
+                        <option>Low</option>
+                        <option>Medium</option>
+                        <option>High</option>
+                        <option>Critical</option>
+                      </select>
+                    </Field>
+                    <Field label="Deposit (GBP)">
+                      <input
+                        type="number"
+                        className="nf-input"
+                        value={form.deposit}
+                        onChange={(e) =>
+                          handleChange("deposit", Number(e.target.value) || 0)
+                        }
+                      />
+                    </Field>
+                  </div>
+
+                  <div className="flex items-center justify-between mt-1">
+                    <div className="text-[10px] text-slate-400 max-w-xs">
+                      In production this connects to{" "}
+                      <span className="font-semibold">Revolut escrow</span> and
+                      marks wallets for engineers automatically.
+                    </div>
+                    <button
+                      className="nf-btn-primary text-[11px]"
+                      disabled={submitting}
+                    >
+                      {submitting ? "Creating…" : "Raise ticket"}
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              <div className="col-span-12 md:col-span-7 flex flex-col">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] text-slate-200">
+                    Recent tickets
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    Mirrored to engineer view as tasks
+                  </span>
+                </div>
+                <div className="mt-1 flex-1 overflow-auto pr-1 space-y-1.5">
+                  {loading && (
+                    <>
+                      <Skeleton className="h-10 rounded" />
+                      <Skeleton className="h-10 rounded" />
+                    </>
+                  )}
+                  {!loading && tickets && tickets.length === 0 && (
+                    <div className="text-[11px] text-slate-400">
+                      No tickets yet. Use the form on the left to create a
+                      demo FM job.
+                    </div>
+                  )}
+                  {!loading &&
+                    tickets &&
+                    tickets.map((t) => (
+                      <div
+                        key={t.id}
+                        className="rounded-xl border border-slate-700/70 bg-slate-900/80 px-3 py-2"
+                      >
+                        <div className="flex items-center justify-between text-[11px]">
+                          <div className="font-semibold">{t.summary}</div>
+                          <StatusBadge status={t.status || "NEW"} />
+                        </div>
+                        <div className="mt-0.5 text-[10px] text-slate-300">
+                          {t.site} • {timeAgo(t.createdAt)}
+                        </div>
+                        <div className="mt-0.5 text-[10px] text-slate-400 flex gap-3">
+                          <span>Priority: {t.priority}</span>
+                          <span>Deposit: £{t.deposit}</span>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      /* -------------------------------------------------------------------
+       * DAO Admin – review queue widget
+       * ------------------------------------------------------------------ */
+
+      function DaoReviewWidget() {
+        const [queue, setQueue] = useState(null);
+        const [loading, setLoading] = useState(true);
+        const [busyId, setBusyId] = useState(null);
+        const [error, setError] = useState("");
+
+        useEffect(() => {
+          let mounted = true;
+          async function load() {
+            try {
+              setLoading(true);
+              const list = await api.getDaoQueue();
+              if (!mounted) return;
+              setQueue(list);
+            } catch (err) {
+              console.error(err);
+              if (mounted) setError(err.message || "Failed to load queue");
+            } finally {
+              if (mounted) setLoading(false);
+            }
+          }
+          load();
+          return () => {
+            mounted = false;
+          };
+        }, []);
+
+        async function act(engineerId, action) {
+          setBusyId(engineerId);
+          setError("");
+          try {
+            if (action === "approve") {
+              await api.approveDaoEngineer(engineerId, "Approved in demo");
+            } else {
+              await api.rejectDaoEngineer(engineerId, "Rejected in demo");
+            }
+            const list = await api.getDaoQueue();
+            setQueue(list);
+          } catch (err) {
+            console.error(err);
+            setError(err.message || "Failed to update engineer");
+          } finally {
+            setBusyId(null);
+          }
+        }
+
+        return (
+          <div className="nf-panel-widget h-full flex flex-col">
+            <div className="flex items-center justify-between mb-1">
+              <div>
+                <div className="text-xs uppercase tracking-[0.22em] text-slate-300">
+                  DAO review queue
+                </div>
+                <div className="mt-1 text-[11px] text-slate-400 max-w-md">
+                  What the DAO &quot;Guardians&quot; see: engineers awaiting
+                  certification before they appear in the live marketplace.
+                </div>
+              </div>
+              <span className="nf-pill text-[10px]">
+                <span className="nf-dot" /> Controls access for all dashboards
+              </span>
+            </div>
+
+            <div className="nf-divider" />
+
+            {error && (
+              <div className="mb-2 text-[11px] text-red-400">{error}</div>
+            )}
+
+            <div className="mt-1 flex-1 overflow-auto pr-1 space-y-1.5">
+              {loading && (
+                <>
+                  <Skeleton className="h-12 rounded" />
+                  <Skeleton className="h-12 rounded" />
+                </>
+              )}
+              {!loading && queue && queue.length === 0 && (
+                <div className="text-[11px] text-slate-400">
+                  No engineers awaiting review. When profiles are submitted from
+                  the engineer widget, they appear here.
+                </div>
+              )}
+              {!loading &&
+                queue &&
+                queue.map((e) => (
+                  <div
+                    key={e.id}
+                    className="rounded-xl border border-indigo-500/70 bg-slate-900/80 px-3 py-2 flex items-center justify-between gap-3"
+                  >
+                    <div>
+                      <div className="text-[11px] font-semibold">
+                        {e.name}{" "}
+                        <span className="text-indigo-300">
+                          • {e.primaryTrade || "Multi-trade"}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 text-[10px] text-slate-300">
+                        {e.city || "Unknown city"} • Rate: £{e.rate || 65}/hr
+                      </div>
+                      <div className="mt-0.5 text-[10px] text-slate-400">
+                        {e.bio || "Profile summary…"}
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <StatusBadge status={e.daoStatus || "PENDING"} />
+                      <div className="flex gap-1">
+                        <button
+                          className="nf-btn-ghost text-[10px]"
+                          disabled={busyId === e.id}
+                          onClick={() => act(e.id, "reject")}
+                        >
+                          Reject
+                        </button>
+                        <button
+                          className="nf-btn-primary text-[10px]"
+                          disabled={busyId === e.id}
+                          onClick={() => act(e.id, "approve")}
+                        >
+                          Approve
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        );
+      }
+function EscrowDepositsWidget() {
+  const [account, setAccount] = useState(null);
+  const [balance, setBalance] = useState(null);
+  const [ledger, setLedger] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    try {
+      setBusy(true);
+      const [acc, bal, led] = await Promise.all([
+        api.getEscrowAccount?.(),
+        api.getEscrowBalance?.(),
+        api.listEscrowLedger?.(),
+      ]);
+      setAccount(acc || null);
+      setBalance(bal || null);
+      setLedger(led || []);
+      api.track?.("escrow_widget_view", {});
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  return (
+    <div className="nf-panel-widget h-full flex flex-col">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <div className="text-xs uppercase tracking-[0.22em] text-slate-300">
+            Revolut escrow (demo)
+          </div>
+          <div className="mt-1 text-[11px] text-slate-400">
+            Client deposits held in Notfall operational escrow (ring-fenced).
+          </div>
+        </div>
+        <button className="nf-btn-ghost text-[11px]" onClick={load} disabled={busy}>
+          {busy ? "Refreshing…" : "Refresh"}
+        </button>
+      </div>
+
+      <div className="nf-divider" />
+
+      {account && (
+        <div className="rounded-2xl border border-slate-700/70 bg-slate-900/60 px-3 py-2">
+          <div className="text-[11px] font-semibold text-slate-100">
+            {account.provider} • {account.accountName}
+          </div>
+          <div className="mt-0.5 text-[10px] text-slate-400">
+            IBAN: {account.ibanMasked} • Currency: {account.currency}
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-3 gap-2 mt-2">
+        <div className="rounded-2xl border border-emerald-500/50 bg-emerald-950/25 px-3 py-2">
+          <div className="text-[10px] text-emerald-200/90">Held</div>
+          <div className="mt-1 text-[16px] font-semibold text-emerald-200">
+            £{balance?.totals?.heldInEscrowGBP?.toFixed ? balance.totals.heldInEscrowGBP.toFixed(0) : (balance?.totals?.heldInEscrowGBP || 0)}
+          </div>
+        </div>
+        <div className="rounded-2xl border border-sky-500/50 bg-sky-950/25 px-3 py-2">
+          <div className="text-[10px] text-sky-200/90">Released</div>
+          <div className="mt-1 text-[16px] font-semibold text-sky-200">
+            £{balance?.totals?.releasedToEngineersGBP?.toFixed ? balance.totals.releasedToEngineersGBP.toFixed(0) : (balance?.totals?.releasedToEngineersGBP || 0)}
+          </div>
+        </div>
+        <div className="rounded-2xl border border-amber-500/50 bg-amber-950/25 px-3 py-2">
+          <div className="text-[10px] text-amber-200/90">Refunded</div>
+          <div className="mt-1 text-[16px] font-semibold text-amber-200">
+            £{balance?.totals?.refundedToClientsGBP?.toFixed ? balance.totals.refundedToClientsGBP.toFixed(0) : (balance?.totals?.refundedToClientsGBP || 0)}
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-3 flex items-center justify-between">
+        <div className="text-[11px] text-slate-200">Recent deposits</div>
+        <div className="text-[10px] text-slate-400">{ledger ? ledger.length : 0} entries</div>
+      </div>
+
+      <div className="mt-2 flex-1 overflow-auto pr-1 space-y-1.5">
+        {!ledger && (
+          <>
+            <Skeleton className="h-10 rounded" />
+            <Skeleton className="h-10 rounded" />
+          </>
+        )}
+        {ledger && ledger.length === 0 && (
+          <div className="text-[11px] text-slate-400">
+            No deposits yet. Raise a ticket from Client/FM view to generate an escrow entry.
+          </div>
+        )}
+        {ledger &&
+          ledger.slice(0, 12).map((e) => (
+            <div
+              key={e.id}
+              className="rounded-xl border border-slate-700/70 bg-slate-900/60 px-3 py-2"
+            >
+              <div className="flex items-center justify-between text-[11px]">
+                <div className="font-semibold text-slate-100">
+                  £{Number(e.amountGBP || 0).toFixed(0)} • {e.status}
+                </div>
+                <div className="text-[10px] text-slate-400">{timeAgo(e.at)}</div>
+              </div>
+              <div className="mt-0.5 text-[10px] text-slate-400">
+                Ref: <span className="font-mono text-slate-200">{e.reconciliationRef}</span>
+              </div>
+              <div className="mt-0.5 text-[10px] text-slate-400">
+                Ticket: <span className="text-slate-200">{e.ticketId || "—"}</span> • Payer:{" "}
+                <span className="text-slate-200">{e.payerName || "—"}</span>
+              </div>
+            </div>
+          ))}
+      </div>
+    </div>
+  );
+}
+
+
+function DemoPerformanceWidget() {
+  const [summary, setSummary] = useState(null);
+  const [busy, setBusy] = useState(false);
+
+  async function load() {
+    try {
+      setBusy(true);
+      const s = await api.getAnalyticsSummary?.();
+      setSummary(s || null);
+      api.track?.("demo_performance_view", {});
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  useEffect(() => {
+    load();
+    const t = setInterval(load, 8000);
+    return () => clearInterval(t);
+  }, []);
+
+  return (
+    <div className="nf-panel-widget h-full flex flex-col">
+      <div className="flex items-center justify-between mb-2">
+        <div>
+          <div className="text-xs uppercase tracking-[0.22em] text-slate-300">
+            Demo performance
+          </div>
+          <div className="mt-1 text-[11px] text-slate-400">
+            Most used features and time spent (demo analytics).
+          </div>
+        </div>
+        <button className="nf-btn-ghost text-[11px]" onClick={load} disabled={busy}>
+          {busy ? "Refreshing…" : "Refresh"}
+        </button>
+      </div>
+
+      <div className="nf-divider" />
+
+      {!summary && (
+        <>
+          <Skeleton className="h-10 rounded mb-2" />
+          <Skeleton className="h-10 rounded" />
+        </>
+      )}
+
+      {summary && (
+        <>
+          <div className="text-[10px] text-slate-400">
+            Date: <span className="text-slate-200">{summary.date}</span> • Role:{" "}
+            <span className="text-slate-200">{summary.role}</span> • EngineerId:{" "}
+            <span className="text-slate-200">{summary.engineerId}</span>
+          </div>
+
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/60 px-3 py-2">
+              <div className="text-[11px] text-slate-200 font-semibold">Top features</div>
+              <div className="mt-1 space-y-1">
+                {(summary.features || []).slice(0, 5).map((f) => (
+                  <div key={f.feature} className="text-[10px] text-slate-400 flex justify-between">
+                    <span className="text-slate-200">{f.feature}</span>
+                    <span>{Math.round((f.totalMs || 0) / 1000)}s</span>
+                  </div>
+                ))}
+                {(summary.features || []).length === 0 && (
+                  <div className="text-[10px] text-slate-500">No feature timings yet.</div>
+                )}
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-700/70 bg-slate-900/60 px-3 py-2">
+              <div className="text-[11px] text-slate-200 font-semibold">Top events</div>
+              <div className="mt-1 space-y-1">
+                {(summary.events || []).slice(0, 6).map((e) => (
+                  <div key={e.event} className="text-[10px] text-slate-400 flex justify-between">
+                    <span className="text-slate-200">{e.event}</span>
+                    <span>{e.count}</span>
+                  </div>
+                ))}
+                {(summary.events || []).length === 0 && (
+                  <div className="text-[10px] text-slate-500">No events yet.</div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-2">
+            <div className="text-[11px] text-slate-200 font-semibold">Recent interactions</div>
+            <div className="mt-1 space-y-1 max-h-[160px] overflow-auto pr-1">
+              {(summary.recentEvents || []).slice(0, 10).map((ev, i) => (
+                <div key={i} className="rounded-xl border border-slate-700/70 bg-slate-900/60 px-3 py-2">
+                  <div className="text-[10px] text-slate-400 flex justify-between">
+                    <span className="text-slate-200">{ev.event}</span>
+                    <span>{timeAgo(ev.at)}</span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 mt-0.5">
+                    {ev.meta ? JSON.stringify(ev.meta).slice(0, 120) : ""}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+      
+
+      /* -------------------------------------------------------------------
+       * Role chip / menu
+       * ------------------------------------------------------------------ */
+
+      const ROLES = [
+  { id: "ENGINEER", label: "Engineer", description: "On-site & remote" },
+  { id: "CLIENT_FM", label: "Client / FM", description: "Landlords, property managers" },
+  { id: "DAO_ADMIN", label: "DAO", description: "Certification & governance" },
+];
+
+
+      function RoleSelector({ role, onChange }) {
+        const [open, setOpen] = useState(false);
+
+        const current =
+          ROLES.find((r) => r.id === role) || ROLES.find((r) => r.id === "ENGINEER");
+
+        return (
+          <div className="relative">
+            <button
+              className="nf-appbar-btn flex items-center gap-2 text-[11px]"
+              onClick={() => setOpen((v) => !v)}
+            >
+              <span className="nf-dot" />
+              <span>{current.label} view</span>
+            </button>
+            {open && (
+              <div className="nf-role-menu">
+                {ROLES.map((r) => (
+                  <button
+                    key={r.id}
+                    className={
+                      "nf-role-menu-item text-[11px] " +
+                      (r.id === current.id ? "nf-role-menu-item-active" : "")
+                    }
+                    onClick={async () => {
+                      setOpen(false);
+                      await onChange(r.id);
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span>{r.label}</span>
+                      {r.id === current.id && (
+                        <span className="nf-circle-small active" />
+                      )}
+                    </div>
+                    <div className="mt-0.5 text-[10px] text-slate-300">
+                      {r.description}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      }
+      /* -------------------------------------------------------------------
+       * App shell
+       * ------------------------------------------------------------------ */
+
+      function App() {
+        const [role, setRole] = useState("ENGINEER");
+        const [tasks, setTasks] = useState(null);
+        const [wallets, setWallets] = useState(null);
+        const [inboxBusy, setInboxBusy] = useState(false);
+        const [selectedWallet, setSelectedWallet] = useState(null);
+        const [cardOverlayWallet, setCardOverlayWallet] = useState(null);
+        const [borderScan, setBorderScan] = useState(false);
+        const [bootstrapError, setBootstrapError] = useState("");
+
+        // ---- bootstrap: get role + engineer data (if applicable) ---------
+
+        useEffect(() => {
+          let mounted = true;
+
+          async function bootstrap() {
+            try {
+              const storedRole = await api.getRole();
+              if (!mounted) return;
+              const r = storedRole || "ENGINEER";
+              setRole(r);
+              if (r === "ENGINEER") {
+                await refreshEngineerData(r, { mounted });
+              }
+            } catch (err) {
+              console.error("Bootstrap error:", err);
+              if (mounted) {
+                setBootstrapError(
+                  err.message || "Failed to initialise demo dashboard"
+                );
+              }
+            }
+          }
+
+          bootstrap();
+          return () => {
+            mounted = false;
+          };
+        }, []);
+
+        // ---- whenever role changes, sync to FakeAPI + load role data -----
+
+        useEffect(() => {
+          let cancelled = false;
+
+          async function syncRole() {
+            try {
+              await api.setRole(role);
+              if (cancelled) return;
+
+              if (role === "ENGINEER") {
+                await refreshEngineerData(role, { mounted: !cancelled });
+              } else {
+                // Non-engineer views don't need these datasets
+                setTasks(null);
+                setWallets(null);
+                setSelectedWallet(null);
+              }
+            } catch (err) {
+              console.error("Role sync error:", err);
+            }
+          }
+
+          syncRole();
+          return () => {
+            cancelled = true;
+          };
+        }, [role]);
+
+        async function refreshEngineerData(currentRole = role, opts = {}) {
+          if (currentRole !== "ENGINEER") return;
+          const { mounted = true } = opts;
+          try {
+            setInboxBusy(true);
+            const [inbox, walletList] = await Promise.all([
+              api.getTasks(),
+              api.getJobWallets(),
+            ]);
+            if (!mounted) return;
+            setTasks(inbox || []);
+            setWallets(walletList || []);
+            if (!selectedWallet && walletList && walletList.length > 0) {
+              setSelectedWallet(walletList[0]);
+            }
+          } catch (err) {
+            console.error("Failed to load engineer data:", err);
+          } finally {
+            setInboxBusy(false);
+          }
+        }
+
+        function handleSelectWallet(wallet) {
+          setSelectedWallet(wallet);
+        }
+
+        function handleTaskSelect(task) {
+          // Try to align task → wallet selection if any
+          if (!wallets || !Array.isArray(wallets)) return;
+          const w = wallets.find(
+            (w) =>
+              w.taskId === task.id ||
+              w.taskId === task.workflowId ||
+              w.id === task.id
+          );
+          if (w) {
+            setSelectedWallet(w);
+          }
+        }
+
+        function handleCardZoom() {
+          if (!selectedWallet) return;
+          setCardOverlayWallet(selectedWallet);
+        }
+
+        function handleCloseOverlay() {
+          setCardOverlayWallet(null);
+        }
+
+        function triggerScan() {
+          setBorderScan(true);
+          setTimeout(() => setBorderScan(false), 1000);
+        }
+
+        const isEngineer = role === "ENGINEER";
+        const isClient = role === "CLIENT";
+        const isDao = role === "DAO_ADMIN";
+
+        return (
+          <div className="nf-root dark">
+            {/* APP BAR ---------------------------------------------------- */}
+            <header className="nf-appbar">
+              <div className="nf-appbar-inner">
+                <div className="nf-brand">
+                  <div className="nf-brand-logo">
+                    <span className="text-xs font-semibold text-slate-50 px-2">
+                      Notfall
+                    </span>
+                  </div>
+                  <div>
+                    <div className="nf-brand-title">
+                      Notfall Engineers{" "}
+                      <span className="text-sky-400 text-[11px] ml-1">
+                        LIVE BETA
+                      </span>
+                    </div>
+                    <div className="nf-brand-sub">
+                      DAO-governed FM marketplace – demo dashboard
+                    </div>
+                  </div>
+                </div>
+
+                <div className="nf-appbar-actions">
+                  <div className="nf-chip">
+                    <span className="nf-chip-dot" />
+                    <span>Job wallet sandbox • Revolut-style</span>
+                  </div>
+                  <RoleSelector
+                    role={role}
+                    onChange={async (r) => {
+                      setRole(r);
+                      triggerScan();
+                    }}
+                  />
+                </div>
+              </div>
+            </header>
+
+            {/* SHELL ------------------------------------------------------ */}
+            <main className="nf-shell-bg">
+              <section className="nf-panel-main">
+                <div
+                  className={
+                    "nf-main-border " +
+                    (borderScan ? "nf-main-border-animating" : "")
+                  }
+                >
+                  <div className="nf-main-border-inner" />
+                </div>
+
+                <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-3">
+                  <div>
+                    <div className="text-xs uppercase tracking-[0.25em] text-slate-400">
+                      Unified workflow view
+                    </div>
+                    <h1 className="mt-1 text-lg font-semibold text-slate-100">
+                      {isEngineer && "Engineer marketplace cockpit"}
+                      {isClient && "Client / FM ticket & wallet view"}
+                      {isDao && "DAO certification & control panel"}
+                    </h1>
+                    <p className="mt-1 text-[11px] text-slate-400 max-w-xl">
+                      Switch roles in the top-right to see how{" "}
+                      <span className="font-semibold text-slate-200">
+                        tickets, job wallets and DAO approvals
+                      </span>{" "}
+                      share the same workflow end-to-end.
+                    </p>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <button
+                      className="nf-btn-ghost text-[11px]"
+                      type="button"
+                      onClick={triggerScan}
+                    >
+                      Run workflow scan
+                    </button>
+                    {bootstrapError && (
+                      <div className="text-[10px] text-red-400 max-w-xs text-right">
+                        {bootstrapError}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* MAIN LAYOUT GRID -------------------------------------- */}
+                <div className="grid grid-cols-12 gap-3 mt-2">
+                  {/* LEFT COLUMN – primary widget per role */}
+                  <div className="col-span-12 md:col-span-4 flex flex-col gap-3">
+                    {isEngineer && (
+                      <EngineerTaskInbox
+                        tasks={tasks}
+                        busy={inboxBusy}
+                        onRefresh={refreshEngineerData}
+                        onSelectTask={handleTaskSelect}
+                      />
+                    )}
+                    {isClient && <ClientTicketWidget />}
+                    {isDao && <DaoReviewWidget />}
+                  </div>
+
+                  {/* RIGHT COLUMN – correlated widgets */}
+                                    {/* RIGHT COLUMN – correlated widgets */}
+                  <div className="col-span-12 md:col-span-8 flex flex-col gap-3">
+                    {isEngineer && (
+                      <>
+                        <EngineerEarningsWidget
+                          wallets={wallets}
+                          selectedWallet={selectedWallet}
+                          onSelectWallet={handleSelectWallet}
+                          onCardZoom={handleCardZoom}
+                        />
+                        <AssetRegistryWidget role={role} />
+                        <EngineerProfileWidget />
+                      </>
+                    )}
+
+                    {isClient && (
+                      <>
+                        {/* Mirror engineer inbox in read-only form */}
+                        <EngineerTaskInbox
+                          tasks={tasks}
+                          busy={inboxBusy}
+                          onRefresh={refreshEngineerData}
+                          onSelectTask={handleTaskSelect}
+                        />
+                        <AssetRegistryWidget role={role} />
+                        <div className="nf-panel-widget text-[11px] text-slate-300">
+                          <div className="font-semibold mb-1">
+                            How this ties together
+                          </div>
+                          <ul className="list-disc list-inside space-y-1 text-slate-400">
+                            <li>
+                              When you raise a ticket here, it appears in the{" "}
+                              <span className="font-semibold">
+                                engineer Task Inbox
+                              </span>{" "}
+                              with the same ID.
+                            </li>
+                            <li>
+                              PLC/HMI alerts linked to your{" "}
+                              <span className="font-semibold">assets</span>{" "}
+                              appear in this widget and can auto-open tickets.
+                            </li>
+                            <li>
+                              Completion + feedback feed back into{" "}
+                              DAO reputation and payout graphs.
+                            </li>
+                          </ul>
+                        </div>
+                      </>
+                    )}
+
+                    {isDao && (
+                      <>
+                        <ClientTicketWidget />
+                        <AssetRegistryWidget role={role} />
+                        <div className="nf-panel-widget text-[11px] text-slate-300">
+                          <div className="font-semibold mb-1">
+                            DAO lens on the same workflow
+                          </div>
+                          <p className="text-slate-400">
+                            DAO Guardians can see{" "}
+                            <span className="font-semibold">
+                              which assets generate repeated PLC alerts
+                            </span>{" "}
+                            and adjust underwriting, SLA rules or partner
+                            funding accordingly.
+                          </p>
+                        </div>
+                      </>
+                    )}
+                  </div>
+
+                </div>
+              </section>
+            </main>
+
+            {/* FULL-SCREEN JOB WALLET OVERLAY ----------------------------- */}
+            {cardOverlayWallet && (
+              <div className="nf-card-overlay" onClick={handleCloseOverlay}>
+                <div
+                  className="nf-card-modal"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <JobWalletCard
+                    wallet={cardOverlayWallet}
+                    side={cardOverlayWallet.side || "front"}
+                    onSideChange={() => {}}
+                    onDoubleClick={() => {}}
+                  />
+                  <div className="nf-card-modal-footer">
+                    <div className="text-[10px] text-slate-300">
+                      Live beta: this visualises the{" "}
+                      <span className="font-semibold">Revolut-style job</span>{" "}
+                      wallet linked to Notfall&apos;s workflow engine. In the
+                      full app this would show{" "}
+                      <span className="font-semibold">
+                        payout history, refunds and NFTL rewards
+                      </span>
+                      .
+                    </div>
+                    <button
+                      className="nf-btn-ghost text-[11px]"
+                      type="button"
+                      onClick={handleCloseOverlay}
+                    >
+                      Close
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+
+      const { enabled: alertsEnabled, setEnabled: setAlertsEnabled, notify } = useAlertEngine();
+
+const widgetCatalog = useMemo(() => {
+  const isApproved = false; // you can wire from daoStatus later
+  return [
+    {
+      id: "engineer_core",
+      title: "Engineer core",
+      items: [
+        { id: "profile", name: "Profile Setup", desc: "Edit profile + uploads (demo)" },
+        { id: "dao", name: "DAO Status", desc: "Submit / resubmit for certification" },
+        { id: "inbox", name: "Task Inbox", desc: "Live offers with sound/vibration" },
+        { id: "wallet", name: "Earnings & Job Wallet", desc: "Wallet list + Revolut-style card" },
+      ],
+    },
+    {
+      id: "ops",
+      title: "Operations",
+      items: [
+        { id: "assetRegistry", name: "Asset Registry", desc: "Assets + PLC alerts stream (read-only for Engineer)" },
+        { id: "plcConsole", name: "PLC Engineer Console", desc: "PLC alerts → tickets → engineer visibility" },
+        { id: "calendar", name: "Calendar", desc: "Schedule & dispatch planning", locked: !isApproved, lockedReason: "Requires DAO approval" },
+      ],
+    },
+  ];
+}, []);
+
+const [marketOpen, setMarketOpen] = useState(false);
+
+// Installed per role (kept simple for demo)
+const [installedWidgets, setInstalledWidgets] = useState(() => ({
+  ENGINEER: ["profile", "dao", "inbox", "wallet", "assetRegistry", "plcConsole"],
+  CLIENT_FM: ["tickets", "assetRegistry"],
+  DAO_ADMIN: ["review", "tickets", "assetRegistry"],
+}));
+
+
+      /* -------------------------------------------------------------------
+       * Mount React app
+       * ------------------------------------------------------------------ */
+
+      const rootEl = document.getElementById("root");
+      const root = ReactDOM.createRoot(rootEl);
+      root.render(<App />);
+    </script>
+  </body>
+</html>

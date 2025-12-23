@@ -1,0 +1,1138 @@
+
+
+
+
+
+
+// htdocs/demo/FakeAPI.js
+// Plain global FakeAPI for the standalone demo (no ES modules).
+// UK English, production-minded demo harness.
+//
+// Merged (no duplicates) from your variants:
+//
+// ✅ Identity bootstrap: URL + localStorage
+// ✅ Roles: ENGINEER | PLC_ENGINEER | CLIENT_FM | DAO_ADMIN (superset, backwards-safe)
+// ✅ Headers: x-demo-role, x-demo-engineer-id, x-demo-client-id
+// ✅ Telemetry + analytics: session events, widget dwell, feature timing, demographics, summaries
+// ✅ Escrow ledger aligned to Revolut operational model (demo-safe display), with transitions:
+//    HELD_IN_ESCROW -> RELEASED_TO_ENGINEER / REFUNDED_TO_CLIENT
+// ✅ Ticket creation optionally mirrors escrow deposit (real ops semantics)
+// ✅ WebSocket helper for /ws/widgets subscriptions
+// ✅ Optional AI matching hooks (demo-safe): scoreEngineersForTicket, getMatchPreview, requestManualAssignHint
+//
+// Notes:
+// - HTTP identity is via headers (demoAuth): x-demo-role, x-demo-engineer-id, x-demo-client-id
+// - WebSocket identity is via query string (?role=...&engineerId=...&clientId=...) OR subscribe payload.
+// - All optional backend endpoints are called with __soft where appropriate (fallback to local).
+
+(function (global) {
+  "use strict";
+
+  const API_BASE = "/api";
+
+  /* ============================================================
+   * Revolut escrow (demo-safe representation of real operations)
+   * ========================================================== */
+
+  const REVOLUT_ESCROW_ACCOUNT = {
+    provider: "Revolut Business",
+    accountName: "Notfall Engineers – Escrow (Operational)",
+    currency: "GBP",
+    ibanMasked: "GB** **** **** **** 1234",
+    sortCodeMasked: "**-**-**",
+    accountNumberMasked: "******1234",
+    internalEscrowRefPrefix: "NF-ESCROW",
+  };
+
+  function getEscrowAccount() {
+    return Promise.resolve({ ...REVOLUT_ESCROW_ACCOUNT });
+  }
+
+  /* ============================================================
+   * Identity & role (URL → localStorage; no duplicates)
+   * ========================================================== */
+
+  // Roles must match backend expectations (superset is safe):
+  // ENGINEER | PLC_ENGINEER | CLIENT_FM | DAO_ADMIN
+  let currentRole = "ENGINEER";
+  let currentEngineerId = "eng_demo_001";
+  let currentClientId = "client_demo_001";
+
+  function _safeSetLS(k, v) {
+    try { localStorage.setItem(k, v); } catch {}
+  }
+
+  function _safeGetLS(k) {
+    try { return localStorage.getItem(k) || ""; } catch { return ""; }
+  }
+
+  function _normaliseRole(r) {
+    const s = String(r || "").trim().toUpperCase();
+    if (s === "ENGINEER" || s === "PLC_ENGINEER" || s === "CLIENT_FM" || s === "DAO_ADMIN") return s;
+    return "";
+  }
+
+  // 1) restore persisted (baseline)
+  (function restoreFromStorage() {
+    const r = _safeGetLS("nf_demo_role");
+    const e = _safeGetLS("nf_demo_engineerId");
+    const c = _safeGetLS("nf_demo_clientId");
+    const nr = _normaliseRole(r);
+    if (nr) currentRole = nr;
+    if (e) currentEngineerId = e;
+    if (c) currentClientId = c;
+  })();
+
+  // 2) override from URL (authoritative on page load)
+  (function bootstrapFromUrl() {
+    try {
+      const url = new URL(window.location.href);
+
+      const nr = _normaliseRole(url.searchParams.get("role"));
+      if (nr) currentRole = nr;
+
+      const eng =
+        url.searchParams.get("engineerId") ||
+        url.searchParams.get("engineerid") ||
+        url.searchParams.get("engineer_id") ||
+        url.searchParams.get("eng");
+      if (eng) currentEngineerId = String(eng);
+
+      const cid =
+        url.searchParams.get("clientId") ||
+        url.searchParams.get("clientid") ||
+        url.searchParams.get("client_id") ||
+        url.searchParams.get("client");
+      if (cid) currentClientId = String(cid);
+
+      // persist
+      _safeSetLS("nf_demo_role", currentRole);
+      _safeSetLS("nf_demo_engineerId", currentEngineerId);
+      _safeSetLS("nf_demo_clientId", currentClientId);
+    } catch {}
+  })();
+
+  function setRole(role) {
+    const nr = _normaliseRole(role || "ENGINEER");
+    if (!nr) return Promise.reject(new Error("Invalid role"));
+    currentRole = nr;
+    _safeSetLS("nf_demo_role", currentRole);
+    Analytics.track("role_set", { role: currentRole });
+    return Promise.resolve({ role: currentRole });
+  }
+
+  function getRole() {
+    return Promise.resolve({
+      role: currentRole,
+      engineerId: currentEngineerId,
+      clientId: currentClientId,
+    });
+  }
+
+  function setEngineerId(engineerId) {
+    currentEngineerId = String(engineerId || "eng_demo_001");
+    _safeSetLS("nf_demo_engineerId", currentEngineerId);
+    Analytics.track("engineer_set", { engineerId: currentEngineerId });
+    return Promise.resolve({ engineerId: currentEngineerId });
+  }
+
+  function getEngineerId() {
+    return Promise.resolve({ engineerId: currentEngineerId });
+  }
+
+  function setClientId(clientId) {
+    currentClientId = String(clientId || "client_demo_001");
+    _safeSetLS("nf_demo_clientId", currentClientId);
+    Analytics.track("client_set", { clientId: currentClientId });
+    return Promise.resolve({ clientId: currentClientId });
+  }
+
+  function getClientId() {
+    return Promise.resolve({ clientId: currentClientId });
+  }
+
+  // Backwards-compatible names
+  function setDemoEngineerId(id) { return setEngineerId(id); }
+  function getDemoEngineerId() { return getEngineerId(); }
+  function setDemoClientId(id) { return setClientId(id); }
+  function getDemoClientId() { return getClientId(); }
+
+  function assertRole(allowed) {
+    if (!allowed.includes(currentRole)) {
+      return Promise.reject(
+        new Error(`role_not_allowed (demo): ${currentRole} → allowed: ${allowed.join(",")}`)
+      );
+    }
+    return Promise.resolve(true);
+  }
+
+  /* ============================================================
+   * Core request helper (single source of truth)
+   * ========================================================== */
+
+  async function request(path, options = {}) {
+    const headers = {
+      "Content-Type": "application/json",
+      "x-demo-role": currentRole,
+      "x-demo-engineer-id": currentEngineerId,
+      "x-demo-client-id": currentClientId,
+      ...(options.headers || {}),
+    };
+
+    const res = await fetch(API_BASE + path, {
+      method: options.method || "GET",
+      headers,
+      body: options.body ? JSON.stringify(options.body) : undefined,
+    });
+
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      if (options.__soft) return null;
+      throw new Error(`API ${res.status} ${res.statusText} – ${text || "request failed"}`);
+    }
+
+    return res.status === 204 ? null : res.json();
+  }
+
+  /* ============================================================
+   * Analytics + Telemetry (merged; no duplicates)
+   * ========================================================== */
+
+  const Analytics = (function () {
+    const TELEMETRY_KEY = "nf_demo_telemetry_v1"; // stream + widgetTime
+    const ANALYTICS_KEY = "nf_demo_analytics_v1"; // daily rollups + features
+    const DEMO_PROFILE_KEY = "nf_demo_demographics_v1";
+
+    const SESSION_ID = (() => {
+      try {
+        const existing = sessionStorage.getItem("nf_demo_sessionId");
+        if (existing) return existing;
+        const id = "sess_" + Math.random().toString(16).slice(2) + "_" + Date.now();
+        sessionStorage.setItem("nf_demo_sessionId", id);
+        sessionStorage.setItem("nf_demo_sessionStart", String(Date.now()));
+        return id;
+      } catch {
+        return "sess_" + Date.now();
+      }
+    })();
+
+    const widgetTimers = new Map();  // widgetId -> startMs
+    const featureTimers = new Map(); // featureName -> {t0, meta}
+
+    function nowIso() {
+      return new Date().toISOString();
+    }
+
+    function getDeviceInfo() {
+      const ua = navigator.userAgent || "";
+      const isMobile = /Mobi|Android|iPhone|iPad/i.test(ua);
+      return {
+        userAgent: ua.slice(0, 180),
+        deviceType: isMobile ? "mobile" : "desktop",
+        language: navigator.language || "en-GB",
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
+        viewport: { w: window.innerWidth, h: window.innerHeight },
+      };
+    }
+
+    function getDemographics() {
+      try {
+        const raw = localStorage.getItem(DEMO_PROFILE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function setDemographics(profile) {
+      try {
+        const safe = Object.assign({}, profile || {});
+        safe.updatedAt = nowIso();
+        localStorage.setItem(DEMO_PROFILE_KEY, JSON.stringify(safe));
+        return safe;
+      } catch {
+        return null;
+      }
+    }
+
+    function _readTelemetry() {
+      try {
+        const raw = localStorage.getItem(TELEMETRY_KEY);
+        return raw ? JSON.parse(raw) : { events: [], widgetTimeMs: {} };
+      } catch {
+        return { events: [], widgetTimeMs: {} };
+      }
+    }
+
+    function _writeTelemetry(obj) {
+      try { localStorage.setItem(TELEMETRY_KEY, JSON.stringify(obj)); } catch {}
+    }
+
+    function _readAnalytics() {
+      try { return JSON.parse(localStorage.getItem(ANALYTICS_KEY) || "{}") || {}; }
+      catch { return {}; }
+    }
+
+    function _writeAnalytics(obj) {
+      try { localStorage.setItem(ANALYTICS_KEY, JSON.stringify(obj)); } catch {}
+    }
+
+    function _accumulateWidgetTime(widgetId, ms) {
+      const t = _readTelemetry();
+      t.widgetTimeMs = t.widgetTimeMs || {};
+      t.widgetTimeMs[widgetId] = (t.widgetTimeMs[widgetId] || 0) + ms;
+      _writeTelemetry(t);
+    }
+
+    async function _softSendTelemetry(evt) {
+      // Optional: if you add these routes later
+      await request("/telemetry", { method: "POST", body: evt, __soft: true });
+      await request("/demo/telemetry", { method: "POST", body: evt, __soft: true });
+      await request("/demo-analytics/event", { method: "POST", body: evt, __soft: true });
+      await request("/analytics/track", { method: "POST", body: evt, __soft: true });
+    }
+
+    function track(eventName, payload) {
+      const evt = {
+        id: "evt_" + Math.random().toString(16).slice(2),
+        at: nowIso(),
+        ts: Date.now(),
+        sessionId: SESSION_ID,
+        role: currentRole,
+        engineerId: currentEngineerId,
+        clientId: currentClientId,
+        event: String(eventName || "event").toLowerCase(),
+        data: payload || {},
+        demographics: getDemographics(),
+        device: getDeviceInfo(),
+        ua: navigator.userAgent,
+      };
+
+      // widget dwell
+      if (evt.event === "widget_enter" && payload && payload.widgetId) {
+        widgetTimers.set(payload.widgetId, Date.now());
+      }
+      if (evt.event === "widget_leave" && payload && payload.widgetId) {
+        const start = widgetTimers.get(payload.widgetId);
+        const durMs = start ? Date.now() - start : 0;
+        widgetTimers.delete(payload.widgetId);
+        _accumulateWidgetTime(payload.widgetId, durMs);
+        evt.data.durMs = durMs;
+      }
+
+      // telemetry stream (cap 3000)
+      const t = _readTelemetry();
+      t.events = t.events || [];
+      t.events.push(evt);
+      if (t.events.length > 3000) t.events = t.events.slice(-3000);
+      _writeTelemetry(t);
+
+      // daily analytics rollup (cap 200/day)
+      const a = _readAnalytics();
+      const dayKey = nowIso().slice(0, 10);
+      if (!a[dayKey]) a[dayKey] = { events: [], features: {} };
+
+      a[dayKey].events.unshift({
+        at: evt.at,
+        event: evt.event,
+        meta: evt.data,
+        role: currentRole,
+        engineerId: currentEngineerId,
+        clientId: currentClientId,
+      });
+      a[dayKey].events = a[dayKey].events.slice(0, 200);
+      _writeAnalytics(a);
+
+      // best-effort post
+      _softSendTelemetry(evt);
+
+      // optional WS broadcast (if connected)
+      try {
+        if (global.widgetSocket && global.widgetSocket.readyState === WebSocket.OPEN) {
+          global.widgetSocket.send(JSON.stringify({ topic: "analytics", action: "event", event: evt }));
+        }
+      } catch {}
+
+      return evt;
+    }
+
+    function widgetEnter(widgetId, meta) {
+      return track("widget_enter", { widgetId, ...(meta || {}) });
+    }
+
+    function widgetLeave(widgetId, meta) {
+      return track("widget_leave", { widgetId, ...(meta || {}) });
+    }
+
+    function startFeature(featureName, meta) {
+      const key = String(featureName || "feature");
+      featureTimers.set(key, { t0: Date.now(), meta: meta || {} });
+      track("feature_started", { feature: key, meta: meta || {} });
+    }
+
+    function endFeature(featureName, extra) {
+      const key = String(featureName || "feature");
+      const item = featureTimers.get(key);
+      if (!item) return;
+      featureTimers.delete(key);
+      const ms = Date.now() - item.t0;
+
+      const a = _readAnalytics();
+      const dayKey = nowIso().slice(0, 10);
+      if (!a[dayKey]) a[dayKey] = { events: [], features: {} };
+      if (!a[dayKey].features[key]) a[dayKey].features[key] = { opens: 0, totalMs: 0 };
+      a[dayKey].features[key].opens += 1;
+      a[dayKey].features[key].totalMs += ms;
+      _writeAnalytics(a);
+
+      track("feature_ended", { feature: key, ms, meta: item.meta, extra: extra || {} });
+    }
+
+    function summariseLocal() {
+      const t = _readTelemetry();
+      const widgetTimeMs = t.widgetTimeMs || {};
+
+      // widget by time
+      let topWidget = "—";
+      let topMs = 0;
+      Object.keys(widgetTimeMs).forEach((k) => {
+        if (widgetTimeMs[k] > topMs) {
+          topMs = widgetTimeMs[k];
+          topWidget = k;
+        }
+      });
+
+      const a = _readAnalytics();
+      const dayKey = nowIso().slice(0, 10);
+      const day = a[dayKey] || { events: [], features: {} };
+
+      const features = Object.entries(day.features || {})
+        .map(([k, v]) => ({
+          feature: k,
+          opens: v.opens || 0,
+          ms: v.totalMs || 0,
+          mins: Math.round(((v.totalMs || 0) / 60000) * 10) / 10,
+        }))
+        .sort((x, y) => y.ms - x.ms)
+        .slice(0, 12);
+
+      const counts = {};
+      (day.events || []).forEach((e) => { counts[e.event] = (counts[e.event] || 0) + 1; });
+      const topEvents = Object.entries(counts)
+        .map(([k, v]) => ({ event: k, count: v }))
+        .sort((x, y) => y.count - x.count)
+        .slice(0, 12);
+
+      let sessionMins = 1;
+      try {
+        const start = Number(sessionStorage.getItem("nf_demo_sessionStart") || Date.now());
+        sessionMins = Math.max(1, Math.round((Date.now() - start) / 60000));
+      } catch {}
+
+      return {
+        mode: "LOCAL",
+        sessionId: SESSION_ID,
+        sessionMins,
+        role: currentRole,
+        engineerId: currentEngineerId,
+        clientId: currentClientId,
+        topWidget,
+        topWidgetMins: Math.round(topMs / 60000),
+        totalEvents: (t.events || []).length,
+        features,
+        topEvents,
+      };
+    }
+
+    function wireSessionLifecycle() {
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "hidden") track("tab_hidden", {});
+        else track("tab_visible", {});
+      });
+
+      window.addEventListener("beforeunload", () => { track("session_ended", { reason: "page_unload" }); });
+      window.addEventListener("pagehide", () => { track("session_ended", { reason: "page_hide" }); });
+
+      track("session_started", { role: currentRole, engineerId: currentEngineerId, clientId: currentClientId });
+    }
+
+    function getLocalTelemetry() { return Promise.resolve(_readTelemetry()); }
+
+    function clearLocalTelemetry() {
+      _writeTelemetry({ events: [], widgetTimeMs: {} });
+      track("telemetry_clear", {});
+      return Promise.resolve({ ok: true });
+    }
+
+    return {
+      track,
+      widgetEnter,
+      widgetLeave,
+      startFeature,
+      endFeature,
+      setDemographics,
+      getDemographics,
+      summariseLocal,
+      wireSessionLifecycle,
+      getLocalTelemetry,
+      clearLocalTelemetry,
+    };
+  })();
+
+  /* ============================================================
+   * WebSocket helper (singleton)
+   * ========================================================== */
+
+  let wsSingleton = null;
+
+  function getWidgetSocket() {
+    if (wsSingleton && (wsSingleton.readyState === WebSocket.OPEN || wsSingleton.readyState === WebSocket.CONNECTING)) {
+      return wsSingleton;
+    }
+
+    const proto = window.location.protocol === "https:" ? "wss:" : "ws:";
+    const url = `${proto}//${window.location.host}/ws/widgets`;
+
+    const ws = new WebSocket(url);
+
+    ws.onopen = () => {
+      const msg = {
+        type: "subscribe",
+        topics: ["task", "ticket", "assetRegistry", "plcAlert", "dao", "payments", "analytics", "system"],
+        role: currentRole,
+        engineerId: currentEngineerId,
+        clientId: currentClientId,
+      };
+
+      try { ws.send(JSON.stringify(msg)); } catch {}
+      try { Analytics.track("ws_connected", { url }); } catch {}
+      console.log("[widgetSocket] connected:", url);
+    };
+
+    ws.onclose = () => {
+      try { Analytics.track("ws_closed", {}); } catch {}
+      console.log("[widgetSocket] closed");
+    };
+
+    ws.onerror = (err) => {
+      try { Analytics.track("ws_error", { message: String((err && err.message) || "ws_error") }); } catch {}
+      console.warn("[widgetSocket] error", err);
+    };
+
+    wsSingleton = ws;
+    global.widgetSocket = ws;
+    return wsSingleton;
+  }
+
+  /* ============================================================
+   * Escrow ledger (Revolut aligned) + transitions
+   * ========================================================== */
+
+  const ESCROW_KEY = "nf_demo_escrow_ledger_v2";
+
+  function _loadEscrowLedger() {
+    try { return JSON.parse(localStorage.getItem(ESCROW_KEY) || "[]") || []; }
+    catch { return []; }
+  }
+
+  function _saveEscrowLedger(list) {
+    try { localStorage.setItem(ESCROW_KEY, JSON.stringify(list || [])); } catch {}
+  }
+
+  function _pushStatusHistory(entry, status, note) {
+    entry.statusHistory = entry.statusHistory || [];
+    entry.statusHistory.push({
+      at: new Date().toISOString(),
+      status,
+      note: note || "",
+      role: currentRole,
+      engineerId: currentEngineerId,
+      clientId: currentClientId,
+    });
+  }
+
+  function escrowDepositLocal({ amountGBP = 200, reference = "Job deposit", ticketId = null, payerName = "Demo Client" } = {}) {
+    const amt = Number(amountGBP || 0);
+
+    const reconRef =
+      `${REVOLUT_ESCROW_ACCOUNT.internalEscrowRefPrefix}-` +
+      (ticketId ? String(ticketId).replace(/\s+/g, "-") : "TICKET") +
+      "-" +
+      String(Date.now()).slice(-6);
+
+    const entry = {
+      id: "esc_" + Date.now(),
+      at: new Date().toISOString(),
+      depositedTo: {
+        provider: REVOLUT_ESCROW_ACCOUNT.provider,
+        accountName: REVOLUT_ESCROW_ACCOUNT.accountName,
+        currency: REVOLUT_ESCROW_ACCOUNT.currency,
+        ibanMasked: REVOLUT_ESCROW_ACCOUNT.ibanMasked,
+      },
+      payerName,
+      amountGBP: amt,
+      currency: "GBP",
+      reference,
+      reconciliationRef: reconRef,
+      status: "HELD_IN_ESCROW",
+      ticketId: ticketId || null,
+      releasedTo: null,
+      refundedTo: null,
+      statusHistory: [],
+    };
+
+    _pushStatusHistory(entry, "HELD_IN_ESCROW", "Funds held in escrow");
+
+    const ledger = _loadEscrowLedger();
+    ledger.unshift(entry);
+    _saveEscrowLedger(ledger);
+
+    Analytics.track("escrow_deposit", {
+      amountGBP: entry.amountGBP,
+      reference,
+      reconciliationRef: reconRef,
+      ticketId: entry.ticketId,
+      depositedTo: entry.depositedTo.accountName,
+      mode: "LOCAL_LEDGER",
+    });
+
+    try {
+      const ws = global.widgetSocket;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ topic: "payments", action: "escrowDeposited", payload: entry }));
+      }
+    } catch {}
+
+    return Promise.resolve(entry);
+  }
+
+  function escrowDeposit(payload = {}) {
+    return assertRole(["CLIENT_FM", "DAO_ADMIN"]).then(async () => {
+      const body = {
+        ticketId: payload.ticketId || null,
+        site: payload.site || "Level39 — 1 Canada Square",
+        amountGBP: Number(payload.amountGBP ?? payload.depositAmountGBP ?? 200),
+        reference: payload.reference || "Job deposit",
+        payerName: payload.payerName || payload.cardholder || "Demo Client / FM",
+
+        escrowProvider: "REVOLUT_BUSINESS",
+        escrowAccountAlias: payload.escrowAccountAlias || "NOTFALL_ESCROW_OPS",
+
+        paymentMethod: payload.paymentMethod || "CARD_DEMO",
+        cardLast4: payload.cardLast4 || "4242",
+        cardholder: payload.cardholder || payload.payerName || "Demo Client",
+      };
+
+      Analytics.track("escrow_deposit_initiated", { amountGBP: body.amountGBP, ticketId: body.ticketId });
+
+      const apiRes = await request("/payments/escrow/deposit", { method: "POST", body, __soft: true });
+      if (apiRes) {
+        Analytics.track("escrow_deposit_recorded", { ticketId: body.ticketId, amountGBP: body.amountGBP, mode: "API" });
+        return apiRes;
+      }
+
+      return escrowDepositLocal({
+        amountGBP: body.amountGBP,
+        reference: body.reference,
+        ticketId: body.ticketId,
+        payerName: body.payerName,
+      });
+    });
+  }
+
+  function listEscrowLedger() {
+    return Promise.resolve(_loadEscrowLedger());
+  }
+
+  function escrowReleaseToEngineer({ escrowId, engineerId, note } = {}) {
+    const ledger = _loadEscrowLedger();
+    const entry = ledger.find((e) => e.id === escrowId);
+
+    if (!entry) return Promise.reject(new Error("escrow_not_found"));
+    if (entry.status !== "HELD_IN_ESCROW") return Promise.reject(new Error("invalid_escrow_state"));
+
+    const toEng = String(engineerId || currentEngineerId);
+
+    entry.status = "RELEASED_TO_ENGINEER";
+    entry.releasedTo = {
+      engineerId: toEng,
+      amountGBP: Number(entry.amountGBP || 0),
+      at: new Date().toISOString(),
+      note: note || "Released on task completion",
+    };
+    _pushStatusHistory(entry, "RELEASED_TO_ENGINEER", note);
+
+    _saveEscrowLedger(ledger);
+    Analytics.track("escrow_release", { escrowId, engineerId: toEng, ticketId: entry.ticketId, mode: "LOCAL_LEDGER" });
+
+    try {
+      const ws = global.widgetSocket;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ topic: "payments", action: "escrowReleased", payload: entry }));
+      }
+    } catch {}
+
+    return Promise.resolve(entry);
+  }
+
+  function escrowRefundToClient({ escrowId, clientId, note } = {}) {
+    const ledger = _loadEscrowLedger();
+    const entry = ledger.find((e) => e.id === escrowId);
+
+    if (!entry) return Promise.reject(new Error("escrow_not_found"));
+    if (entry.status !== "HELD_IN_ESCROW") return Promise.reject(new Error("invalid_escrow_state"));
+
+    const toClient = String(clientId || currentClientId);
+
+    entry.status = "REFUNDED_TO_CLIENT";
+    entry.refundedTo = {
+      clientId: toClient,
+      amountGBP: Number(entry.amountGBP || 0),
+      at: new Date().toISOString(),
+      note: note || "Refunded to client",
+    };
+    _pushStatusHistory(entry, "REFUNDED_TO_CLIENT", note);
+
+    _saveEscrowLedger(ledger);
+    Analytics.track("escrow_refund", { escrowId, clientId: toClient, ticketId: entry.ticketId, mode: "LOCAL_LEDGER" });
+
+    try {
+      const ws = global.widgetSocket;
+      if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ topic: "payments", action: "escrowRefunded", payload: entry }));
+      }
+    } catch {}
+
+    return Promise.resolve(entry);
+  }
+
+  function getEscrowBalance() {
+    const ledger = _loadEscrowLedger();
+
+    let held = 0;
+    let released = 0;
+    let refunded = 0;
+
+    for (const e of ledger) {
+      const amt = Number(e.amountGBP || 0);
+      if (e.status === "HELD_IN_ESCROW") held += amt;
+      if (e.status === "RELEASED_TO_ENGINEER") released += amt;
+      if (e.status === "REFUNDED_TO_CLIENT") refunded += amt;
+    }
+
+    return Promise.resolve({
+      account: { ...REVOLUT_ESCROW_ACCOUNT },
+      totals: {
+        heldInEscrowGBP: held,
+        releasedToEngineersGBP: released,
+        refundedToClientsGBP: refunded,
+      },
+      ledgerCount: ledger.length,
+    });
+  }
+
+  function getEscrowStatus() {
+    return assertRole(["CLIENT_FM", "DAO_ADMIN", "ENGINEER", "PLC_ENGINEER"]).then(async () => {
+      const apiRes = await request("/payments/escrow/status", { method: "GET", __soft: true });
+      if (apiRes) return apiRes;
+      return { mode: "LOCAL_LEDGER", items: _loadEscrowLedger(), balance: await getEscrowBalance() };
+    });
+  }
+
+  /* ============================================================
+   * Engineer endpoints (superset roles)
+   * ========================================================== */
+
+  function getEngineerProfile() {
+    Analytics.track("api_call", { name: "getEngineerProfile" });
+    return assertRole(["ENGINEER", "PLC_ENGINEER"]).then(() => request("/engineer/profile"));
+  }
+
+  function saveEngineerProfile(payload) {
+    Analytics.track("api_call", { name: "saveEngineerProfile" });
+    return assertRole(["ENGINEER", "PLC_ENGINEER"]).then(() =>
+      request("/engineer/profile", { method: "PUT", body: payload })
+    );
+  }
+
+  function submitProfileToDAO() {
+    Analytics.track("api_call", { name: "submitProfileToDAO" });
+    return assertRole(["ENGINEER", "PLC_ENGINEER"]).then(() =>
+      request("/engineer/profile/submit-dao", { method: "POST" })
+    );
+  }
+
+  function getDAOStatus() {
+    Analytics.track("api_call", { name: "getDAOStatus" });
+    return assertRole(["ENGINEER", "PLC_ENGINEER"]).then(() => request("/engineer/dao-status"));
+  }
+
+  function resubmitDAO() {
+    Analytics.track("api_call", { name: "resubmitDAO" });
+    return assertRole(["ENGINEER", "PLC_ENGINEER"]).then(() =>
+      request("/engineer/dao-resubmit", { method: "POST" })
+    );
+  }
+
+  function getTasks() {
+    Analytics.track("api_call", { name: "getTasks" });
+    return assertRole(["ENGINEER", "PLC_ENGINEER"]).then(() => request("/engineer/tasks"));
+  }
+
+  function acceptTask(id) {
+    Analytics.track("task_action", { action: "accept", id });
+    return assertRole(["ENGINEER", "PLC_ENGINEER"]).then(() =>
+      request(`/engineer/tasks/${id}/accept`, { method: "POST" })
+    );
+  }
+
+  function declineTask(id, reason) {
+    Analytics.track("task_action", { action: "decline", id, reason: reason || "not_specified" });
+    return assertRole(["ENGINEER", "PLC_ENGINEER"]).then(() =>
+      request(`/engineer/tasks/${id}/decline`, { method: "POST", body: reason ? { reason } : undefined })
+    );
+  }
+
+  function startTravel(id) {
+    Analytics.track("task_action", { action: "start_travel", id });
+    return assertRole(["ENGINEER", "PLC_ENGINEER"]).then(() =>
+      request(`/engineer/tasks/${id}/start-travel`, { method: "POST" })
+    );
+  }
+
+  function arriveOnSite(id) {
+    Analytics.track("task_action", { action: "arrive_on_site", id });
+    return assertRole(["ENGINEER", "PLC_ENGINEER"]).then(() =>
+      request(`/engineer/tasks/${id}/arrive-on-site`, { method: "POST" })
+    );
+  }
+
+  function completeTask(id) {
+    Analytics.track("task_action", { action: "complete", id });
+    return assertRole(["ENGINEER", "PLC_ENGINEER"]).then(() =>
+      request(`/engineer/tasks/${id}/complete`, { method: "POST" })
+    );
+  }
+
+  function saveTaskRams(taskId, payload) {
+    Analytics.track("task_action", { action: "save_rams", taskId });
+    return assertRole(["ENGINEER", "PLC_ENGINEER"]).then(() =>
+      request(`/engineer/tasks/${taskId}/rams`, { method: "POST", body: payload })
+    );
+  }
+
+  function saveTaskEvidence(taskId, payload) {
+    const count = Array.isArray(payload && payload.files) ? payload.files.length : 0;
+    Analytics.track("task_action", { action: "save_evidence", taskId, count });
+    return assertRole(["ENGINEER", "PLC_ENGINEER"]).then(() =>
+      request(`/engineer/tasks/${taskId}/evidence`, { method: "POST", body: payload })
+    );
+  }
+
+  function getJobWallets() {
+    Analytics.track("api_call", { name: "getJobWallets" });
+    return assertRole(["ENGINEER", "PLC_ENGINEER"]).then(() => request("/engineer/job-wallets"));
+  }
+
+  /* ============================================================
+   * Client / Ticket endpoints (with escrow mirror)
+   * ========================================================== */
+
+  function normalisePriority(p) {
+    if (!p) return "MEDIUM";
+    const s = String(p).trim().toUpperCase();
+    if (s === "HIGH" || s === "MEDIUM" || s === "LOW" || s === "CRITICAL") return s;
+    if (s === "HI") return "HIGH";
+    return "MEDIUM";
+  }
+
+  async function createDemoTicket(payload = {}) {
+    await assertRole(["CLIENT_FM", "DAO_ADMIN"]);
+
+    const body = {
+      site: payload.site || "Level39 — 1 Canada Square",
+      summary: payload.summary || "Emergency boiler leak — reception zone",
+      description: payload.description || "Auto-generated ticket from demo cockpit.",
+      priority: normalisePriority(payload.priority || "HIGH"),
+      trade: payload.trade || "HVAC",
+      depositAmountGBP: payload.depositAmountGBP === 0 ? 0 : Number(payload.depositAmountGBP ?? payload.deposit ?? 200),
+      roleContext: payload.roleContext || "CLIENT",
+      source: payload.source || "Manual",
+      assetId: payload.assetId || null,
+      plcAlertId: payload.plcAlertId || null,
+      engineerIdHint: payload.engineerIdHint || null,
+    };
+
+    Analytics.track("ticket_action", {
+      action: "create_attempt",
+      site: body.site,
+      trade: body.trade,
+      priority: body.priority,
+      source: body.source,
+      depositAmountGBP: body.depositAmountGBP,
+    });
+
+    const created = await request("/client/tickets", { method: "POST", body });
+    const createdId = created && (created.id || created.ticketId || created._id)
+      ? (created.id || created.ticketId || created._id)
+      : null;
+
+    if (created && body.depositAmountGBP > 0) {
+      await escrowDeposit({
+        ticketId: createdId,
+        site: body.site,
+        amountGBP: body.depositAmountGBP,
+        reference: `Deposit for ticket ${createdId || "TICKET"}`,
+        payerName: payload.payerName || "Demo Client / FM",
+      });
+    }
+
+    Analytics.track("ticket_action", { action: "create_success", ticketId: createdId });
+    return created;
+  }
+
+  function getClientTickets() {
+    Analytics.track("api_call", { name: "getClientTickets" });
+    return assertRole(["CLIENT_FM", "DAO_ADMIN"]).then(() => request("/client/tickets"));
+  }
+
+  function createTicketFromPlcAlert(alert) {
+    const sev = String((alert && alert.severity) || "Medium").toUpperCase();
+    const isCritical = sev === "CRITICAL" || sev === "HIGH";
+
+    Analytics.track("ticket_action", { action: "create_from_plc", severity: sev });
+
+    return createDemoTicket({
+      site: (alert && alert.siteName) || "Unknown site",
+      summary: ((alert && alert.code) ? `[${alert.code}] ` : "") + ((alert && alert.message) || "PLC alert raised"),
+      description: JSON.stringify(
+        {
+          source: "PLC",
+          plcTag: alert ? alert.plcTag : null,
+          siteCode: alert ? alert.siteCode : null,
+          assetId: alert ? alert.assetId : null,
+          plcAlertId: alert ? (alert.id || alert._id) : null,
+          severity: alert ? alert.severity : null,
+          createdAt: alert ? alert.createdAt : null,
+        },
+        null,
+        2
+      ),
+      priority: isCritical ? "CRITICAL" : "MEDIUM",
+      trade: "HVAC",
+      depositAmountGBP: 200,
+      roleContext: "PLC",
+      source: "PLC",
+      assetId: alert ? alert.assetId : null,
+      plcAlertId: alert ? (alert.id || alert._id) : null,
+      payerName: "PLC Auto-Trigger (Demo)",
+    });
+  }
+
+  /* ============================================================
+   * DAO demo endpoints
+   * ========================================================== */
+
+  function getDaoQueue() {
+    Analytics.track("api_call", { name: "getDaoQueue" });
+    return assertRole(["DAO_ADMIN"]).then(() => request("/dao-demo/review-queue"));
+  }
+
+  function approveDaoEngineer(engineerIdParam, note) {
+    Analytics.track("dao_action", { action: "approve", engineerId: engineerIdParam });
+    return assertRole(["DAO_ADMIN"]).then(() =>
+      request(`/dao-demo/review-queue/${engineerIdParam}/approve`, {
+        method: "POST",
+        body: { note: note || "Approved (demo)" },
+      })
+    );
+  }
+
+  function rejectDaoEngineer(engineerIdParam, note) {
+    Analytics.track("dao_action", { action: "reject", engineerId: engineerIdParam });
+    return assertRole(["DAO_ADMIN"]).then(() =>
+      request(`/dao-demo/review-queue/${engineerIdParam}/reject`, {
+        method: "POST",
+        body: { note: note || "Rejected (demo)" },
+      })
+    );
+  }
+
+  /* ============================================================
+   * Assets + PLC alerts (engineer read access retained; PLC_ENGINEER included)
+   * ========================================================== */
+
+  function getAssets() {
+    Analytics.track("api_call", { name: "getAssets" });
+    return assertRole(["ENGINEER", "PLC_ENGINEER", "CLIENT_FM", "DAO_ADMIN"]).then(() => request("/assets"));
+  }
+
+  function createAsset(payload = {}) {
+    Analytics.track("asset_action", { action: "create_attempt" });
+
+    return assertRole(["CLIENT_FM", "DAO_ADMIN"]).then(() => {
+      const body = {
+        name: payload.name || "Chiller Plant 01",
+        siteName: payload.siteName || payload.site || "Level39 — 1 Canada Square",
+        siteCode: payload.siteCode || "L39",
+        type: payload.type || payload.assetType || "Chiller",
+        criticality: payload.criticality || "High",
+        plcTag: payload.plcTag || "DB1.FaultCode",
+        meta: payload.meta || {},
+      };
+      return request("/assets", { method: "POST", body });
+    });
+  }
+
+  function getPlcAlerts() {
+    Analytics.track("api_call", { name: "getPlcAlerts" });
+    return assertRole(["ENGINEER", "PLC_ENGINEER", "CLIENT_FM", "DAO_ADMIN"]).then(() => request("/assets/plc-alerts"));
+  }
+
+  function createTestPlcAlert(payload = {}) {
+    Analytics.track("plc_action", { action: "create_test_alert", severity: payload && payload.severity });
+    return assertRole(["CLIENT_FM", "DAO_ADMIN"]).then(() =>
+      request("/assets/plc-alerts/test", { method: "POST", body: payload })
+    );
+  }
+
+  /* ============================================================
+   * Optional AI matching hooks (demo-safe)
+   * ========================================================== */
+
+  async function scoreEngineersForTicket(ticket) {
+    const body = { ticket: ticket || null, role: currentRole, engineerId: currentEngineerId, clientId: currentClientId };
+    Analytics.track("ai_score_request", { hasTicket: !!ticket });
+
+    const apiRes = await request("/ai/match/score", { method: "POST", body, __soft: true });
+    if (apiRes) return apiRes;
+
+    const seed = ticket && (ticket.id || ticket.ticketId || ticket._id) ? String(ticket.id || ticket.ticketId || ticket._id) : String(Date.now());
+    let x = 0;
+    for (let i = 0; i < seed.length; i++) x = (x + seed.charCodeAt(i) * (i + 1)) % 997;
+    const jitter = (n) => ((x + n * 37) % 100) / 100;
+
+    return {
+      mode: "MOCK",
+      top: [
+        { engineerId: "eng_demo_001", score: 0.92 + jitter(1) * 0.06, reasons: ["closest ETA", "certified", "good rating"] },
+        { engineerId: "eng_demo_014", score: 0.86 + jitter(2) * 0.08, reasons: ["similar jobs", "available now"] },
+        { engineerId: "eng_demo_009", score: 0.81 + jitter(3) * 0.10, reasons: ["fast response history"] },
+        { engineerId: "eng_demo_021", score: 0.77 + jitter(4) * 0.12, reasons: ["preferred vendor", "within rate cap"] },
+        { engineerId: "eng_demo_003", score: 0.74 + jitter(5) * 0.12, reasons: ["nearby", "spare capacity"] },
+      ],
+    };
+  }
+
+  async function getMatchPreview(ticketId) {
+    Analytics.track("ai_match_preview", { ticketId: ticketId || null });
+    const apiRes = await request(`/ai/match/preview?ticketId=${encodeURIComponent(ticketId || "")}`, { method: "GET", __soft: true });
+    if (apiRes) return apiRes;
+    return { mode: "MOCK", ticketId: ticketId || null, note: "No backend AI endpoint; returning mock preview." };
+  }
+
+  async function requestManualAssignHint(ticketId, engineerIdHint) {
+    Analytics.track("ai_manual_assign_hint", { ticketId: ticketId || null, engineerIdHint: engineerIdHint || null });
+    const apiRes = await request("/ai/match/manual-hint", { method: "POST", body: { ticketId, engineerIdHint }, __soft: true });
+    if (apiRes) return apiRes;
+    return { ok: true, mode: "MOCK", ticketId: ticketId || null, engineerIdHint: engineerIdHint || null };
+  }
+
+  /* ============================================================
+   * Demo analytics summary endpoint (prefer backend; fallback local)
+   * ========================================================== */
+
+  function getDemoAnalyticsSummary() {
+    return request("/demo-analytics/summary", { method: "GET", __soft: true })
+      .then((r) => r || Analytics.summariseLocal())
+      .catch(() => Analytics.summariseLocal());
+  }
+
+  /* ============================================================
+   * Initialise analytics lifecycle
+   * ========================================================== */
+
+  Analytics.wireSessionLifecycle();
+
+  /* ============================================================
+   * Export
+   * ========================================================== */
+
+  global.FakeAPI = {
+    // role / identity
+    setRole,
+    getRole,
+    setEngineerId,
+    getEngineerId,
+    setClientId,
+    getClientId,
+
+    // backwards compatible
+    setDemoEngineerId,
+    getDemoEngineerId,
+    setDemoClientId,
+    getDemoClientId,
+
+    // ws
+    getWidgetSocket,
+
+    // telemetry + analytics
+    track: Analytics.track,
+    widgetEnter: Analytics.widgetEnter,
+    widgetLeave: Analytics.widgetLeave,
+    startFeature: Analytics.startFeature,
+    endFeature: Analytics.endFeature,
+    setDemographics: (profile) => Promise.resolve(Analytics.setDemographics(profile)),
+    getDemographics: () => Promise.resolve(Analytics.getDemographics()),
+    getDemoAnalyticsSummary,
+    getLocalTelemetry: Analytics.getLocalTelemetry,
+    clearLocalTelemetry: Analytics.clearLocalTelemetry,
+
+    // escrow
+    getEscrowAccount,
+    escrowDeposit,
+    escrowDepositLocal,
+    escrowReleaseToEngineer,
+    escrowRefundToClient,
+    listEscrowLedger,
+    getEscrowBalance,
+    getEscrowStatus,
+
+    // engineer
+    getEngineerProfile,
+    saveEngineerProfile,
+    submitProfileToDAO,
+    getDAOStatus,
+    resubmitDAO,
+    getTasks,
+    acceptTask,
+    declineTask,
+    startTravel,
+    arriveOnSite,
+    completeTask,
+    saveTaskRams,
+    saveTaskEvidence,
+    getJobWallets,
+
+    // client
+    createDemoTicket,
+    getClientTickets,
+    createTicketFromPlcAlert,
+
+    // dao
+    getDaoQueue,
+    approveDaoEngineer,
+    rejectDaoEngineer,
+
+    // assets + plc alerts
+    getAssets,
+    createAsset,
+    getPlcAlerts,
+    createTestPlcAlert,
+
+    // AI matching hooks
+    scoreEngineersForTicket,
+    getMatchPreview,
+    requestManualAssignHint,
+  };
+})(window);

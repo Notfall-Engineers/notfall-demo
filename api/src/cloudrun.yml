@@ -1,0 +1,15 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: notfall-waitlist-api
+spec:
+  template:
+    spec:
+      containers:
+        - image: gcr.io/PROJECT_ID/notfall-waitlist-api:latest
+          env:
+            - name: WAITLIST_COLLECTION
+              value: dao_waitlist_v1
+            - name: ALLOWED_ORIGINS
+              value: "https://notfallengineers.co.uk,https://www.notfallengineers.co.uk"
+      ingress: all

@@ -1,0 +1,1982 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Notfall Engineers — Standardised Dashboard</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- React stack -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <style>
+      /* =========================================================
+         NOTFALL ENGINEERS — STANDARDISED DASHBOARD STYLING
+         - Kept your visual language, layout + gradients
+         - Added: modal typography standard, a11y focus rings, reduced-motion
+         ========================================================= */
+
+      :root {
+        --nf-primary: #3a7bff;
+        --nf-primary-alt: #7a3fff;
+        --nf-accent: #00e1b4;
+        --nf-danger: #ff3b30;
+
+        --nf-dark-bg: radial-gradient(
+          circle at top left,
+          #172554 0,
+          #020617 55%,
+          #020617 100%
+        );
+        --nf-dark-shell: radial-gradient(
+          circle at 8% -20%,
+          #1d4ed8 0,
+          #020617 55%
+        );
+        --nf-dark-panel: radial-gradient(
+          circle at -10% -40%,
+          #1d4ed8 0,
+          #020617 60%
+        );
+        --nf-dark-widget: radial-gradient(
+          circle at -20% -40%,
+          #1d4ed8 0,
+          #020617 70%
+        );
+
+        --nf-light-bg: radial-gradient(
+          circle at top left,
+          #e0f2fe 0,
+          #f8fafc 60%,
+          #eef2ff 100%
+        );
+        --nf-light-shell: radial-gradient(
+          circle at 0% 0%,
+          #e0ecff 0,
+          #f8fafc 60%
+        );
+        --nf-light-panel: linear-gradient(135deg, #ffffff, #f1f5f9);
+        --nf-light-widget: linear-gradient(145deg, #f8fafc, #ffffff);
+
+        --nf-text-dark: #e5edf8;
+        --nf-text-muted-dark: #9ca3af;
+        --nf-text-light: #020617;
+        --nf-text-muted-light: #6b7280;
+
+        --nf-font: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+          "Segoe UI", Roboto, Arial, sans-serif;
+
+        /* standard modal font + sizing (so modals/pops/alerts match) */
+        --nf-modal-title: 14px;
+        --nf-modal-body: 12px;
+        --nf-modal-muted: rgba(226, 232, 240, 0.82);
+      }
+
+      html,
+      body,
+      #root {
+        height: 100%;
+      }
+
+      body {
+        margin: 0;
+        font-family: var(--nf-font);
+        -webkit-font-smoothing: antialiased;
+        background: var(--nf-dark-bg);
+      }
+
+      /* A11y focus ring (clean + consistent) */
+      :focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.9),
+          0 0 0 8px rgba(56, 189, 248, 0.2);
+        border-radius: 14px;
+      }
+
+      /* Reduced motion (keeps “warm feel” but avoids nausea) */
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          animation: none !important;
+          transition: none !important;
+          scroll-behavior: auto !important;
+        }
+      }
+
+      /* THEME ROOTS ------------------------------------------------------- */
+
+      .nf-root {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .nf-root.dark {
+        color: var(--nf-text-dark);
+      }
+
+      .nf-root.light {
+        color: var(--nf-text-light);
+        background: var(--nf-light-bg);
+      }
+
+      /* APP BAR ----------------------------------------------------------- */
+
+      .nf-appbar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: radial-gradient(circle at 0% -80%, #1d4ed8 0, #020617 55%);
+        box-shadow: 0 22px 60px rgba(0, 0, 0, 0.85),
+          0 0 0 1px rgba(15, 23, 42, 0.9);
+        border-bottom: 1px solid rgba(30, 64, 175, 0.8);
+        backdrop-filter: blur(18px);
+      }
+
+      .nf-appbar-inner {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 18px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .nf-brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        min-width: 260px;
+      }
+
+      .nf-brand-logo {
+        height: 36px;
+        width: 36px;
+        border-radius: 10px;
+        background: radial-gradient(
+          circle at 30% 20%,
+          #38bdf8,
+          #1d4ed8 60%,
+          #22c55e 100%
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.85);
+        flex: 0 0 auto;
+      }
+
+      .nf-brand-logo span {
+        font-weight: 900;
+        font-size: 14px;
+        letter-spacing: 0.08em;
+      }
+
+      .nf-brand-title {
+        font-weight: 800;
+        font-size: 18px;
+        letter-spacing: 0.03em;
+        line-height: 1.1;
+      }
+
+      .nf-brand-sub {
+        font-size: 11px;
+        opacity: 0.8;
+        margin-top: 2px;
+      }
+
+      .nf-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 4px 11px;
+        font-size: 11px;
+        background: radial-gradient(
+          circle at 0 0,
+          #16a34a 0,
+          #052e16 50%,
+          #020617 100%
+        );
+        color: #bbf7d0;
+        box-shadow: 0 10px 30px rgba(22, 163, 74, 0.75),
+          0 0 0 1px rgba(34, 197, 94, 0.5);
+      }
+
+      .nf-chip-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 14px rgba(34, 197, 94, 0.9);
+      }
+
+      .nf-appbar-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .nf-appbar-btn {
+        border-radius: 999px;
+        padding: 6px 14px;
+        border: 1px solid rgba(148, 163, 184, 0.7);
+        background: radial-gradient(
+          circle at 0 0,
+          rgba(15, 23, 42, 0.95),
+          rgba(15, 23, 42, 0.98)
+        );
+        color: #e5e7eb;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.95);
+        transition: transform 0.1s ease, box-shadow 0.16s ease,
+          border-color 0.16s ease, background 0.16s ease;
+      }
+
+      .nf-appbar-btn:hover {
+        transform: translateY(-1px);
+        border-color: #38bdf8;
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.98);
+      }
+
+      .nf-appbar-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 8px 20px rgba(15, 23, 42, 0.9);
+      }
+
+      /* COMMON PRIMITIVES ------------------------------------------------- */
+
+      .nf-shell-bg {
+        max-width: 80rem;
+        margin: 1.8rem auto 2.4rem;
+        border-radius: 30px;
+        padding: 1.5rem 1.25rem 1.75rem;
+        background: var(--nf-dark-shell);
+        box-shadow: 0 26px 70px rgba(15, 23, 42, 0.9),
+          0 0 0 1px rgba(15, 23, 42, 0.85);
+      }
+
+      .nf-grid {
+        display: grid;
+        grid-template-columns: 340px minmax(0, 1fr);
+        gap: 1.25rem;
+        align-items: start;
+      }
+
+      .nf-panel-main {
+        border-radius: 26px;
+        padding: 1.5rem 1.75rem 1.6rem;
+        background: var(--nf-dark-panel);
+        box-shadow: 0 22px 60px rgba(15, 23, 42, 0.85),
+          0 0 0 1px rgba(15, 23, 42, 0.85);
+        position: relative;
+        overflow: hidden;
+        transform-origin: center;
+        transition: transform 0.2s ease, box-shadow 0.25s ease,
+          border-color 0.2s ease;
+        border: 1px solid rgba(37, 99, 235, 0.7);
+        min-height: 520px;
+      }
+
+      .nf-panel-main:hover {
+        transform: perspective(1200px) rotateX(0.4deg) rotateY(-0.7deg)
+          translateY(-1px);
+        box-shadow: 0 32px 90px rgba(15, 23, 42, 0.95),
+          0 0 0 1px rgba(96, 165, 250, 0.8);
+      }
+
+      .nf-main-border {
+        position: absolute;
+        inset: 0;
+        border-radius: inherit;
+        padding: 2px;
+        pointer-events: none;
+      }
+
+      .nf-main-border-inner {
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        border: 1px solid rgba(56, 189, 248, 0.7);
+        box-shadow: 0 0 28px rgba(56, 189, 248, 0.75),
+          0 0 70px rgba(30, 64, 175, 0.9);
+      }
+
+      .nf-main-border-animating {
+        animation: nf-scan 950ms ease-out;
+      }
+
+      @keyframes nf-scan {
+        0% {
+          opacity: 0.4;
+          box-shadow: 0 0 10px rgba(22, 163, 74, 0.6),
+            0 0 40px rgba(22, 163, 74, 0.8);
+        }
+        40% {
+          opacity: 1;
+          box-shadow: 0 0 30px rgba(22, 163, 74, 0.9),
+            0 0 90px rgba(22, 101, 52, 1);
+        }
+        100% {
+          opacity: 0.75;
+          box-shadow: 0 0 24px rgba(56, 189, 248, 0.7),
+            0 0 70px rgba(30, 64, 175, 0.9);
+        }
+      }
+
+      .nf-panel-widget {
+        border-radius: 26px;
+        padding: 1.25rem 1.3rem;
+        background: var(--nf-dark-widget);
+        box-shadow: 0 18px 60px rgba(15, 23, 42, 0.9),
+          0 0 0 1px rgba(15, 23, 42, 0.9);
+      }
+
+      .nf-divider {
+        height: 1px;
+        width: 100%;
+        background: linear-gradient(
+          90deg,
+          rgba(148, 163, 184, 0),
+          rgba(148, 163, 184, 0.55),
+          rgba(148, 163, 184, 0)
+        );
+        margin: 0.5rem 0;
+      }
+
+      .nf-input {
+        width: 100%;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.55);
+        padding: 0.6rem 1rem;
+        background: radial-gradient(
+          circle at top left,
+          rgba(15, 23, 42, 0.9),
+          rgba(15, 23, 42, 0.98)
+        );
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+          0 12px 30px rgba(15, 23, 42, 0.9);
+        font-size: 0.9rem;
+        color: #e5edf8;
+        transition: box-shadow 0.16s ease, border-color 0.16s ease,
+          transform 0.08s ease, background 0.16s ease;
+      }
+
+      .nf-input:focus {
+        outline: none;
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 1px rgba(56, 189, 248, 0.8),
+          0 0 0 7px rgba(56, 189, 248, 0.25);
+        transform: translateY(-0.5px);
+      }
+
+      textarea.nf-input {
+        border-radius: 20px;
+        min-height: 90px;
+        resize: vertical;
+      }
+
+      .nf-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        border-radius: 999px;
+        padding: 0.55rem 1.2rem;
+        border: none;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 600;
+        background-image: linear-gradient(135deg, #2563eb, #4f46e5);
+        color: white;
+        box-shadow: 0 16px 40px rgba(37, 99, 235, 0.9),
+          0 0 0 1px rgba(191, 219, 254, 0.6);
+        transition: transform 0.1s ease, box-shadow 0.15s ease,
+          filter 0.12s ease;
+      }
+
+      .nf-btn-primary:hover:not(:disabled) {
+        transform: translateY(-1px);
+        filter: brightness(1.05);
+        box-shadow: 0 20px 55px rgba(37, 99, 235, 1),
+          0 0 0 1px rgba(219, 234, 254, 0.95);
+      }
+
+      .nf-btn-primary:active:not(:disabled) {
+        transform: translateY(0);
+        box-shadow: 0 10px 32px rgba(37, 99, 235, 0.95),
+          0 0 0 1px rgba(219, 234, 254, 0.9);
+      }
+
+      .nf-btn-primary:disabled {
+        opacity: 0.45;
+        cursor: default;
+        box-shadow: none;
+      }
+
+      .nf-btn-ghost {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        border-radius: 999px;
+        padding: 0.5rem 1rem;
+        border: 1px solid rgba(148, 163, 184, 0.7);
+        background: radial-gradient(
+          circle at top,
+          rgba(15, 23, 42, 0.95),
+          rgba(15, 23, 42, 0.98)
+        );
+        cursor: pointer;
+        font-size: 0.86rem;
+        font-weight: 500;
+        color: #e5e7eb;
+        box-shadow: 0 8px 22px rgba(15, 23, 42, 0.95);
+        transition: background 0.18s ease, transform 0.08s ease,
+          box-shadow 0.16s ease, border-color 0.16s ease;
+      }
+
+      .nf-btn-ghost:hover:not(:disabled) {
+        transform: translateY(-1px);
+        border-color: #38bdf8;
+        box-shadow: 0 12px 28px rgba(15, 23, 42, 0.98);
+      }
+
+      .nf-btn-ghost:disabled {
+        opacity: 0.45;
+        cursor: default;
+        box-shadow: none;
+      }
+
+      .nf-pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 0.18rem 0.65rem;
+        font-size: 0.72rem;
+        font-weight: 500;
+        gap: 0.35rem;
+        background: linear-gradient(145deg, #0f172a, #020617);
+        color: #e5e7eb;
+        border: 1px solid rgba(148, 163, 184, 0.7);
+        box-shadow: 0 6px 14px rgba(15, 23, 42, 0.8);
+        white-space: nowrap;
+      }
+
+      .nf-pill-beta {
+        color: #ff3b30;
+        border-color: rgba(248, 113, 113, 0.9);
+        box-shadow: 0 0 18px rgba(248, 113, 113, 0.7);
+      }
+
+      .nf-muted {
+        color: var(--nf-text-muted-dark);
+      }
+
+      .nf-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 12px rgba(34, 197, 94, 0.9);
+        animation: nf-dot-pulse 1.6s ease-out infinite;
+      }
+
+      .nf-dot-idle {
+        background: #6b7280;
+        box-shadow: none;
+        animation: none;
+      }
+
+      @keyframes nf-dot-pulse {
+        0% {
+          transform: scale(0.9);
+          opacity: 0.7;
+        }
+        50% {
+          transform: scale(1.1);
+          opacity: 1;
+        }
+        100% {
+          transform: scale(0.95);
+          opacity: 0.75;
+        }
+      }
+
+      /* Widget sidebar ---------------------------------------------------- */
+
+      .nf-widget-item {
+        border-radius: 18px;
+        padding: 0.6rem 0.7rem;
+        border: 1px solid transparent;
+        display: flex;
+        align-items: center;
+        gap: 0.8rem;
+        width: 100%;
+        cursor: pointer;
+        transition: background 0.16s ease, box-shadow 0.2s ease,
+          border-color 0.16s ease, transform 0.08s ease, opacity 0.16s ease;
+      }
+
+      .nf-widget-item-default {
+        background: transparent;
+      }
+
+      .nf-widget-item-default:hover {
+        background: rgba(15, 23, 42, 0.95);
+        border-color: rgba(148, 163, 184, 0.6);
+        box-shadow: 0 10px 30px rgba(15, 23, 42, 0.98);
+      }
+
+      .nf-widget-item-active {
+        background: radial-gradient(circle at -10% -40%, #2563eb, #020617 70%);
+        border-color: rgba(96, 165, 250, 0.95);
+        box-shadow: 0 20px 50px rgba(37, 99, 235, 0.95),
+          0 0 0 1px rgba(191, 219, 254, 0.9);
+        transform: translateY(-1px);
+      }
+
+      .nf-widget-item-locked {
+        opacity: 0.4;
+        cursor: default;
+      }
+
+      .nf-circle-small {
+        width: 9px;
+        height: 9px;
+        border-radius: 999px;
+        background: #4b5563;
+      }
+
+      .nf-circle-small.active {
+        background: #22c55e;
+        box-shadow: 0 0 12px rgba(34, 197, 94, 0.9);
+      }
+
+      /* Status badge ------------------------------------------------------ */
+
+      .nf-status-badge {
+        border-radius: 999px;
+        padding: 3px 9px;
+        font-size: 11px;
+        font-weight: 600;
+      }
+
+      .nf-status-not-submitted {
+        background: rgba(15, 23, 42, 0.7);
+        color: #9ca3af;
+      }
+
+      .nf-status-pending {
+        background: rgba(251, 191, 36, 0.13);
+        color: #fbbf24;
+      }
+
+      .nf-status-approved {
+        background: rgba(16, 185, 129, 0.17);
+        color: #6ee7b7;
+      }
+
+      .nf-status-rejected {
+        background: rgba(248, 113, 113, 0.18);
+        color: #fecaca;
+      }
+
+      /* Skeleton loader --------------------------------------------------- */
+
+      .nf-skeleton {
+        animation: nf-skel 1.4s ease-in-out infinite;
+        background: linear-gradient(
+          90deg,
+          rgba(148, 163, 184, 0.3),
+          rgba(148, 163, 184, 0.55),
+          rgba(148, 163, 184, 0.3)
+        );
+        background-size: 200% 100%;
+      }
+
+      .nf-skeleton.rounded {
+        border-radius: 999px;
+      }
+
+      @keyframes nf-skel {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+
+      /* Task card --------------------------------------------------------- */
+
+      .nf-task-card {
+        border-radius: 18px;
+        padding: 0.85rem 0.9rem;
+        margin-bottom: 0.7rem;
+        border: 1px solid rgba(80, 120, 255, 0.7);
+        background: radial-gradient(
+          circle at 20% 0%,
+          #1b2a68 0%,
+          #0d1a45 35%,
+          #08122f 70%,
+          #050a1f 100%
+        );
+        box-shadow: 0 18px 60px rgba(5, 10, 40, 0.9),
+          0 0 0 1px rgba(10, 20, 60, 0.95);
+        transition: transform 0.12s ease, box-shadow 0.18s ease,
+          background 0.18s ease, border-color 0.18s ease;
+      }
+
+      .nf-task-card:hover {
+        transform: translateY(-1px);
+        border-color: rgba(129, 140, 248, 1);
+        box-shadow: 0 24px 70px rgba(10, 20, 60, 0.95),
+          0 0 0 1px rgba(191, 219, 254, 0.9);
+      }
+
+      .nf-task-card-new {
+        animation: nf-new-task 850ms ease-out;
+      }
+
+      @keyframes nf-new-task {
+        0% {
+          box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.95),
+            0 20px 50px rgba(5, 10, 40, 0.9);
+          transform: translateY(-1px);
+        }
+        70% {
+          box-shadow: 0 0 0 8px rgba(34, 197, 94, 0),
+            0 20px 50px rgba(5, 10, 40, 0.9);
+        }
+        100% {
+          box-shadow: 0 18px 60px rgba(5, 10, 40, 0.9),
+            0 0 0 1px rgba(10, 20, 60, 0.95);
+          transform: translateY(0);
+        }
+      }
+
+      .nf-job-wallet-strip {
+        margin-top: 0.55rem;
+        border-radius: 12px;
+        padding: 0.35rem 0.6rem;
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        background: radial-gradient(circle at 0 0, #22c55e33, #022c22 70%);
+        border: 1px solid rgba(45, 212, 191, 0.7);
+        color: #bbf7d0;
+      }
+
+      .nf-job-wallet-tag {
+        border-radius: 999px;
+        padding: 0.12rem 0.6rem;
+        border: 1px solid rgba(45, 212, 191, 0.8);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+
+      /* Earnings widget --------------------------------------------------- */
+
+      .nf-earn-kpi-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 0.9rem;
+        margin-top: 1rem;
+      }
+
+      .nf-earn-kpi-card {
+        border-radius: 18px;
+        padding: 0.75rem 0.9rem;
+        background: radial-gradient(circle at -10% -30%, #1d4ed8, #020617 70%);
+        border: 1px solid rgba(37, 99, 235, 0.8);
+        box-shadow: 0 18px 50px rgba(15, 23, 42, 0.9),
+          0 0 0 1px rgba(15, 23, 42, 0.95);
+        font-size: 12px;
+      }
+
+      .nf-earn-chart-shell {
+        margin-top: 1.1rem;
+        border-radius: 18px;
+        padding: 0.9rem 1.1rem 0.9rem;
+        background: radial-gradient(circle at 0 -40%, #1d4ed8, #020617 75%);
+        border: 1px solid rgba(59, 130, 246, 0.9);
+        box-shadow: 0 22px 60px rgba(15, 23, 42, 0.95),
+          0 0 0 1px rgba(15, 23, 42, 0.95);
+      }
+
+      .nf-earn-chart-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 6px;
+        font-size: 10px;
+        color: rgba(226, 232, 240, 0.7);
+      }
+
+      .nf-earn-jobwallet-row {
+        margin-top: 0.5rem;
+        border-radius: 14px;
+        padding: 0.6rem 0.8rem;
+        background: radial-gradient(circle at 0 -40%, #0f766e, #022c22 70%);
+        border: 1px solid rgba(45, 212, 191, 0.85);
+        font-size: 11px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.7rem;
+        color: #ccfbf1;
+        cursor: pointer;
+        box-shadow: 0 14px 42px rgba(15, 23, 42, 0.95),
+          0 0 0 1px rgba(15, 23, 42, 0.9);
+        transition: transform 0.1s ease, box-shadow 0.16s ease,
+          border-color 0.16s ease, background 0.16s ease;
+      }
+
+      .nf-earn-jobwallet-row:hover {
+        transform: translateY(-1px);
+        border-color: rgba(125, 211, 252, 1);
+        box-shadow: 0 18px 56px rgba(15, 23, 42, 0.98),
+          0 0 0 1px rgba(56, 189, 248, 0.9);
+      }
+
+      .nf-earn-jobwallet-row-active {
+        border-color: rgba(56, 189, 248, 0.95);
+        box-shadow: 0 20px 60px rgba(15, 23, 42, 1),
+          0 0 0 1px rgba(56, 189, 248, 0.95);
+      }
+
+      .nf-earn-jobwallet-row-title {
+        font-weight: 600;
+        font-size: 12px;
+      }
+
+      .nf-earn-jobwallet-row-meta {
+        font-size: 10px;
+        opacity: 0.9;
+      }
+
+      .nf-earn-jobwallet-row-kpi {
+        text-align: right;
+        font-size: 10px;
+      }
+
+      /* Inline Job Wallet card layout (right-hand side) ------------------- */
+
+      .nf-jobwallet-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 1.1fr);
+        gap: 1.1rem;
+        margin-top: 0.75rem;
+        align-items: stretch;
+      }
+
+      .nf-jobwallet-list {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .nf-jobwallet-selected {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .nf-jobwallet-card-shell {
+        width: 100%;
+        max-width: 420px;
+        margin-left: auto;
+        margin-right: auto;
+        border-radius: 24px;
+        padding: 0.8rem;
+        background: radial-gradient(circle at -10% -40%, #1d4ed8, #020617 70%);
+        box-shadow: 0 24px 70px rgba(15, 23, 42, 0.95),
+          0 0 0 1px rgba(15, 23, 42, 0.9);
+      }
+
+      /* Actual virtual card itself --------------------------------------- */
+
+      .nf-jobwallet-card {
+        position: relative;
+        border-radius: 20px;
+        padding: 16px 20px 18px;
+        background: radial-gradient(
+          circle at 0 0,
+          #1d4ed8 0,
+          #059669 70%,
+          #022c22 100%
+        );
+        color: #e5edf8;
+        box-shadow: 0 18px 55px rgba(15, 23, 42, 0.98),
+          0 0 0 1px rgba(15, 23, 42, 0.95);
+        overflow: hidden;
+        cursor: pointer;
+        transform-origin: center;
+        transition: transform 0.16s ease, box-shadow 0.2s ease,
+          filter 0.18s ease;
+        user-select: none;
+      }
+
+      .nf-jobwallet-card::before {
+        content: "";
+        position: absolute;
+        inset: -40%;
+        background: radial-gradient(
+            circle at 0% 0%,
+            rgba(56, 189, 248, 0.7),
+            transparent 60%
+          ),
+          radial-gradient(
+            circle at 100% 100%,
+            rgba(34, 197, 94, 0.75),
+            transparent 65%
+          );
+        opacity: 0.4;
+        pointer-events: none;
+      }
+
+      .nf-jobwallet-card-inner {
+        position: relative;
+        z-index: 1;
+      }
+
+      .nf-jobwallet-card:hover {
+        transform: translateY(-2px) scale(1.01);
+        box-shadow: 0 26px 75px rgba(15, 23, 42, 1),
+          0 0 0 1px rgba(191, 219, 254, 0.95);
+        filter: saturate(1.05);
+      }
+
+      .nf-jobwallet-card:active {
+        transform: translateY(0) scale(0.995);
+        box-shadow: 0 18px 50px rgba(15, 23, 42, 0.95),
+          0 0 0 1px rgba(148, 163, 184, 0.9);
+        filter: saturate(1);
+      }
+
+      .nf-jobwallet-chip-front {
+        width: 32px;
+        height: 24px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #facc15, #f97316);
+        box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.6),
+          0 10px 20px rgba(15, 23, 42, 0.9);
+      }
+
+      .nf-card-label {
+        letter-spacing: 0.18em;
+        font-size: 10px;
+        text-transform: uppercase;
+        opacity: 0.9;
+      }
+
+      /* Digital amount styling -------------------------------------------- */
+
+      .nf-card-amount-digital {
+        font-size: 2.4rem;
+        line-height: 1.05;
+        letter-spacing: 0.04em;
+        font-weight: 800;
+        color: #bbf7d0;
+        text-shadow: 0 0 10px rgba(74, 222, 128, 0.9),
+          0 0 26px rgba(22, 163, 74, 0.85),
+          0 0 40px rgba(22, 163, 74, 0.85);
+        filter: drop-shadow(0 0 6px rgba(22, 163, 74, 0.9));
+      }
+
+      .nf-card-amount-digital span.currency {
+        font-size: 0.9rem;
+        font-weight: 600;
+        margin-left: 0.25rem;
+        opacity: 0.9;
+      }
+
+      @keyframes nf-amount-glow {
+        0% {
+          text-shadow: 0 0 8px rgba(74, 222, 128, 0.8),
+            0 0 20px rgba(22, 163, 74, 0.7),
+            0 0 32px rgba(22, 163, 74, 0.7);
+          opacity: 0.98;
+        }
+        50% {
+          text-shadow: 0 0 14px rgba(74, 222, 128, 1),
+            0 0 32px rgba(22, 163, 74, 0.9),
+            0 0 56px rgba(22, 163, 74, 0.9);
+          opacity: 1;
+        }
+        100% {
+          text-shadow: 0 0 8px rgba(74, 222, 128, 0.85),
+            0 0 24px rgba(22, 163, 74, 0.78),
+            0 0 40px rgba(22, 163, 74, 0.78);
+          opacity: 0.99;
+        }
+      }
+
+      .nf-card-amount-digital.glow {
+        animation: nf-amount-glow 3.1s ease-in-out infinite;
+      }
+
+      .nf-card-pan {
+        font-size: 13px;
+        letter-spacing: 0.25em;
+        opacity: 0.96;
+      }
+
+      .nf-card-meta-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 1.5rem;
+        font-size: 10px;
+        margin-top: 6px;
+      }
+
+      .nf-card-meta-label {
+        opacity: 0.8;
+      }
+
+      .nf-card-meta-value {
+        font-weight: 600;
+      }
+
+      .nf-card-engineer {
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        margin-top: 6px;
+      }
+
+      .nf-card-footer-text {
+        font-size: 10px;
+        margin-top: 10px;
+        opacity: 0.9;
+      }
+
+      .nf-card-zoom-hint {
+        margin-top: 0.4rem;
+        font-size: 10px;
+        color: rgba(226, 232, 240, 0.8);
+        text-align: right;
+      }
+
+      /* Full-screen card zoom overlay ------------------------------------ */
+
+      .nf-card-overlay {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(
+          circle at top,
+          rgba(15, 23, 42, 0.97),
+          rgba(2, 6, 23, 0.98)
+        );
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 60;
+        padding: 18px;
+      }
+
+      .nf-card-modal {
+        width: 420px;
+        max-width: calc(100% - 20px);
+        border-radius: 28px;
+        padding: 20px 22px 22px;
+        background: radial-gradient(circle at -10% -40%, #1d4ed8, #020617 70%);
+        box-shadow: 0 32px 90px rgba(0, 0, 0, 0.96),
+          0 0 0 1px rgba(148, 163, 184, 0.7);
+        color: #e5edf8;
+        font-family: var(--nf-font);
+      }
+
+      /* Standardise modal/pops/alerts typography */
+      .nf-modal-title {
+        font-size: var(--nf-modal-title);
+        font-weight: 800;
+        letter-spacing: 0.02em;
+        margin: 0;
+      }
+      .nf-modal-body {
+        font-size: var(--nf-modal-body);
+        color: var(--nf-modal-muted);
+        line-height: 1.5;
+        margin-top: 8px;
+      }
+
+      .nf-card-modal-footer {
+        margin-top: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 11px;
+      }
+
+      .nf-card-modal-copy {
+        font-size: 10px;
+        color: rgba(226, 232, 240, 0.85);
+        margin-top: 10px;
+      }
+
+      @media (max-width: 960px) {
+        .nf-grid {
+          grid-template-columns: 1fr;
+        }
+        .nf-appbar-inner {
+          padding: 16px 18px;
+        }
+        .nf-shell-bg {
+          margin: 1.2rem 0.9rem 2rem;
+        }
+        .nf-jobwallet-layout {
+          grid-template-columns: minmax(0, 1fr);
+        }
+        .nf-jobwallet-selected {
+          margin-top: 0.75rem;
+        }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+    <script type="text/babel">
+      const { useEffect, useMemo, useRef, useState } = React;
+
+      /* ----------------------------- helpers ----------------------------- */
+
+      function formatGBP(amount) {
+        return new Intl.NumberFormat("en-GB", {
+          style: "currency",
+          currency: "GBP",
+          maximumFractionDigits: 0
+        }).format(amount);
+      }
+
+      function clamp(n, a, b) {
+        return Math.max(a, Math.min(b, n));
+      }
+
+      function useEscapeToClose(onClose, enabled) {
+        useEffect(() => {
+          if (!enabled) return;
+          const onKey = (e) => {
+            if (e.key === "Escape") onClose?.();
+          };
+          window.addEventListener("keydown", onKey);
+          return () => window.removeEventListener("keydown", onKey);
+        }, [onClose, enabled]);
+      }
+
+      /* --------------------------- UI primitives ------------------------- */
+
+      function AppBar({ theme, onToggleTheme, live }) {
+        return (
+          <div className="nf-appbar">
+            <div className="nf-appbar-inner">
+              <div className="nf-brand" aria-label="Notfall Engineers">
+                <div className="nf-brand-logo" aria-hidden="true">
+                  <span>NF</span>
+                </div>
+                <div>
+                  <div className="nf-brand-title">Notfall Engineers</div>
+                  <div className="nf-brand-sub">
+                    Standardised Dashboard · WidgetHub → Display
+                  </div>
+                </div>
+              </div>
+
+              <div className="nf-appbar-actions">
+                <span className="nf-chip" title="Realtime status">
+                  <span className={"nf-chip-dot"}></span>
+                  Live WS: {live ? "Connected" : "Idle"}
+                </span>
+
+                <button className="nf-appbar-btn" onClick={onToggleTheme}>
+                  Theme: {theme === "dark" ? "Dark" : "Light"}
+                </button>
+
+                <button
+                  className="nf-appbar-btn"
+                  onClick={() =>
+                    alert(
+                      "Demo note: this is a front-end-only build.\nWire to your API/WS in /api and /ws when ready."
+                    )
+                  }
+                >
+                  System Note
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function PanelHeader({ title, subtitle, right }) {
+        return (
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 14 }}>
+            <div>
+              <div style={{ fontWeight: 900, fontSize: 18, letterSpacing: "0.02em" }}>
+                {title}
+              </div>
+              {subtitle ? (
+                <div className="nf-muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  {subtitle}
+                </div>
+              ) : null}
+            </div>
+            {right ? <div style={{ display: "flex", gap: 10, alignItems: "center" }}>{right}</div> : null}
+          </div>
+        );
+      }
+
+      function WidgetItem({ active, locked, title, desc, dotActive, onClick }) {
+        const cls =
+          "nf-widget-item " +
+          (locked
+            ? "nf-widget-item-locked"
+            : active
+            ? "nf-widget-item-active"
+            : "nf-widget-item-default");
+
+        return (
+          <button
+            className={cls}
+            onClick={locked ? undefined : onClick}
+            style={{ textAlign: "left", background: "transparent" }}
+          >
+            <span className={"nf-circle-small " + (dotActive ? "active" : "")} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontWeight: 700, fontSize: 13 }}>{title}</div>
+              <div className="nf-muted" style={{ fontSize: 11, marginTop: 2 }}>
+                {desc}
+              </div>
+            </div>
+            {locked ? <span className="nf-pill nf-pill-beta">LOCKED</span> : null}
+          </button>
+        );
+      }
+
+      /* ------------------------------ Modal ------------------------------ */
+
+      function OverlayModal({ open, title, children, onClose, footerLeft, footerRight }) {
+        useEscapeToClose(onClose, open);
+
+        if (!open) return null;
+
+        return (
+          <div
+            className="nf-card-overlay"
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            onMouseDown={(e) => {
+              if (e.target.classList.contains("nf-card-overlay")) onClose?.();
+            }}
+          >
+            <div className="nf-card-modal">
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                <div>
+                  <h3 className="nf-modal-title">{title}</h3>
+                  <div className="nf-modal-body">
+                    Consistent typography across modals, pops & alerts (your warm feel stays intact).
+                  </div>
+                </div>
+
+                <button className="nf-btn-ghost" onClick={onClose}>
+                  Close
+                </button>
+              </div>
+
+              <div className="nf-divider" style={{ marginTop: 14 }} />
+              <div>{children}</div>
+
+              <div className="nf-card-modal-footer">
+                <div>{footerLeft}</div>
+                <div style={{ display: "inline-flex", gap: 8 }}>{footerRight}</div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      /* --------------------------- Widgets (left) ------------------------- */
+
+      const WIDGETS = [
+        {
+          id: "overview",
+          title: "Ops Overview",
+          desc: "KPI pulse, deposit buffer, payout readiness",
+          locked: false
+        },
+        {
+          id: "taskInbox",
+          title: "Task Inbox",
+          desc: "Live tasks, accept/reject simulation",
+          locked: false
+        },
+        {
+          id: "earnings",
+          title: "Earnings + Job Wallet",
+          desc: "£200 buffer card + job wallet ledger",
+          locked: false
+        },
+        {
+          id: "daoCourt",
+          title: "DAO Courtroom",
+          desc: "Sentinel → Guardian → Judge explanation",
+          locked: false
+        },
+        {
+          id: "compliance",
+          title: "RAMS + Compliance",
+          desc: "Risk flags, SLA, audit log",
+          locked: false
+        }
+      ];
+
+      function Sidebar({ activeId, setActiveId, livePulse }) {
+        return (
+          <div className="nf-panel-widget" aria-label="WidgetHub">
+            <PanelHeader
+              title="WidgetHub"
+              subtitle="Select a module on the left — details appear on the right."
+              right={<span className="nf-pill">Standardised</span>}
+            />
+
+            <div className="nf-divider" />
+            <div style={{ display: "flex", gap: 10 }}>
+              <input className="nf-input" placeholder="Search widgets…" />
+            </div>
+
+            <div className="nf-divider" />
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {WIDGETS.map((w) => (
+                <WidgetItem
+                  key={w.id}
+                  active={w.id === activeId}
+                  locked={w.locked}
+                  title={w.title}
+                  desc={w.desc}
+                  dotActive={livePulse && w.id === "taskInbox"}
+                  onClick={() => setActiveId(w.id)}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      }
+    <script type="text/babel">
+      /* --------------------------- Mock services -------------------------- */
+
+      function createMockWs({ onEvent }) {
+        // Simulates a WS feed that periodically emits tasks / events.
+        let alive = true;
+        let t = 0;
+
+        const interval = setInterval(() => {
+          if (!alive) return;
+          t += 1;
+
+          const roll = Math.random();
+          if (roll < 0.55) return;
+
+          if (roll < 0.8) {
+            onEvent?.({
+              type: "TASK_NEW",
+              payload: {
+                id: "T-" + String(Date.now()).slice(-6),
+                title: ["Emergency boiler leak", "Lift fault (HardStop)", "Power trip", "AC leak"][
+                  Math.floor(Math.random() * 4)
+                ],
+                location: ["Canary Wharf", "Mayfair", "Paddington", "Southwark"][
+                  Math.floor(Math.random() * 4)
+                ],
+                depositGBP: 200,
+                severity: roll > 0.92 ? "Critical" : "Standard"
+              }
+            });
+          } else {
+            onEvent?.({
+              type: "DAO_JUDGE",
+              payload: {
+                verdict: "Proceed",
+                reason:
+                  "Deposit buffer verified, SLA risk acceptable, engineer reputation meets threshold."
+              }
+            });
+          }
+        }, 1400);
+
+        return {
+          close() {
+            alive = false;
+            clearInterval(interval);
+          }
+        };
+      }
+
+      /* --------------------------- Right panel UI -------------------------- */
+
+      function OverviewPanel({ stats, setStats }) {
+        const kpis = [
+          { label: "Active Tickets", value: stats.activeTickets },
+          { label: "Escrow Buffer", value: formatGBP(stats.escrowBufferGBP) },
+          { label: "Payouts Ready", value: stats.payoutReady + "%" },
+          { label: "SLA Risk", value: stats.slaRisk + "/100" }
+        ];
+
+        return (
+          <>
+            <PanelHeader
+              title="Ops Overview"
+              subtitle="Profitability + efficiency in one glance (buffer → payout → compliance)."
+              right={
+                <button
+                  className="nf-btn-ghost"
+                  onClick={() =>
+                    setStats((s) => ({
+                      ...s,
+                      payoutReady: clamp(s.payoutReady + 2, 0, 100),
+                      escrowBufferGBP: s.escrowBufferGBP + 50
+                    }))
+                  }
+                >
+                  Simulate Deposit +£50
+                </button>
+              }
+            />
+
+            <div className="nf-earn-kpi-grid">
+              {kpis.map((k) => (
+                <div key={k.label} className="nf-earn-kpi-card">
+                  <div className="nf-muted" style={{ fontSize: 11 }}>
+                    {k.label}
+                  </div>
+                  <div style={{ fontWeight: 900, fontSize: 16, marginTop: 6 }}>
+                    {k.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="nf-earn-chart-shell">
+              <div style={{ fontWeight: 800, marginBottom: 6 }}>Efficiency Pulse (demo)</div>
+              <div
+                style={{
+                  height: 86,
+                  borderRadius: 14,
+                  border: "1px solid rgba(148, 163, 184, 0.5)",
+                  background:
+                    "radial-gradient(circle at 0 0, rgba(15, 23, 42, 0.65), rgba(2, 6, 23, 0.95))",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center"
+                }}
+              >
+                <div className="nf-muted" style={{ fontSize: 12 }}>
+                  Replace with your real AnalyticsService + BigQuery charts later.
+                </div>
+              </div>
+              <div className="nf-earn-chart-labels">
+                <span>Low latency dispatch</span>
+                <span>High acceptance rate</span>
+                <span>Lower SLA risk</span>
+              </div>
+            </div>
+          </>
+        );
+      }
+
+      function TaskInboxPanel({ tasks, setTasks, setToast }) {
+        function acceptTask(id) {
+          setTasks((arr) => arr.map((t) => (t.id === id ? { ...t, status: "Accepted" } : t)));
+          setToast({ type: "ok", msg: "Task accepted and escrow buffer reserved." });
+        }
+
+        function rejectTask(id) {
+          setTasks((arr) => arr.map((t) => (t.id === id ? { ...t, status: "Rejected" } : t)));
+          setToast({ type: "warn", msg: "Task rejected — matching will route to next engineers." });
+        }
+
+        return (
+          <>
+            <PanelHeader
+              title="Task Inbox"
+              subtitle="Live tasks — designed to be simple to sell, scale, and operate."
+              right={<span className="nf-pill">WS Live</span>}
+            />
+
+            <div className="nf-divider" />
+
+            {tasks.length === 0 ? (
+              <div style={{ padding: 10 }}>
+                <div className="nf-skeleton" style={{ height: 16, borderRadius: 999 }} />
+                <div style={{ height: 10 }} />
+                <div className="nf-skeleton" style={{ height: 100, borderRadius: 18 }} />
+              </div>
+            ) : null}
+
+            {tasks.map((t, idx) => (
+              <div key={t.id} className={"nf-task-card " + (t.isNew ? "nf-task-card-new" : "")}>
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 900, fontSize: 14 }}>{t.title}</div>
+                    <div className="nf-muted" style={{ fontSize: 11, marginTop: 4 }}>
+                      {t.location} · Ticket {t.id} · Severity:{" "}
+                      <span style={{ fontWeight: 800 }}>{t.severity}</span>
+                    </div>
+                  </div>
+
+                  <div style={{ textAlign: "right" }}>
+                    <div className="nf-pill">{t.status}</div>
+                    <div className="nf-muted" style={{ fontSize: 11, marginTop: 6 }}>
+                      Buffer: {formatGBP(t.depositGBP)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="nf-job-wallet-strip">
+                  <span className="nf-job-wallet-tag">Escrow</span>
+                  <span>
+                    Deposit reserved until completion · fee deducted from engineer rate (5%)
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                  <button
+                    className="nf-btn-primary"
+                    onClick={() => acceptTask(t.id)}
+                    disabled={t.status !== "New"}
+                  >
+                    Accept
+                  </button>
+                  <button
+                    className="nf-btn-ghost"
+                    onClick={() => rejectTask(t.id)}
+                    disabled={t.status !== "New"}
+                  >
+                    Reject
+                  </button>
+                </div>
+              </div>
+            ))}
+          </>
+        );
+      }
+
+      function JobWalletCard({ card, onOpenZoom }) {
+        return (
+          <div className="nf-jobwallet-card-shell">
+            <div
+              className="nf-jobwallet-card"
+              onClick={onOpenZoom}
+              title="Tip: double-tap to zoom"
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") onOpenZoom?.();
+              }}
+            >
+              <div className="nf-jobwallet-card-inner">
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div className="nf-card-label">JOB WALLET</div>
+                  <div className="nf-jobwallet-chip-front" aria-hidden="true" />
+                </div>
+
+                <div style={{ marginTop: 14, display: "flex", justifyContent: "space-between", gap: 12 }}>
+                  <div>
+                    <div className={"nf-card-amount-digital glow"}>
+                      £{card.balance}
+                      <span className="currency">GBP</span>
+                    </div>
+                    <div className="nf-card-engineer">{card.engineerName}</div>
+                  </div>
+
+                  <div style={{ textAlign: "right" }}>
+                    <div className="nf-card-label">ID</div>
+                    <div className="nf-card-pan" style={{ marginTop: 6 }}>
+                      {card.pan}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="nf-card-meta-row">
+                  <div>
+                    <div className="nf-card-meta-label">Deposit Buffer</div>
+                    <div className="nf-card-meta-value">{formatGBP(card.depositGBP)}</div>
+                  </div>
+                  <div style={{ textAlign: "right" }}>
+                    <div className="nf-card-meta-label">Status</div>
+                    <div className="nf-card-meta-value">{card.status}</div>
+                  </div>
+                </div>
+
+                <div className="nf-card-footer-text">
+                  Buffer covers travel/diagnostics/emergency materials. Client approves remainder before release.
+                </div>
+              </div>
+            </div>
+
+            <div className="nf-card-zoom-hint">Double-tap / double-click to zoom</div>
+          </div>
+        );
+      }
+
+      function EarningsPanel({ walletRows, selectedId, setSelectedId, card, setToast, onOpenZoom }) {
+        return (
+          <>
+            <PanelHeader
+              title="Earnings + Job Wallet"
+              subtitle="Clean hierarchy: list → selected card (zoom on double-tap)."
+              right={<span className="nf-pill">5% Platform Fee</span>}
+            />
+
+            <div className="nf-jobwallet-layout">
+              <div className="nf-jobwallet-list">
+                {walletRows.map((r) => (
+                  <div
+                    key={r.id}
+                    className={
+                      "nf-earn-jobwallet-row " +
+                      (r.id === selectedId ? "nf-earn-jobwallet-row-active" : "")
+                    }
+                    onClick={() => setSelectedId(r.id)}
+                  >
+                    <div>
+                      <div className="nf-earn-jobwallet-row-title">{r.title}</div>
+                      <div className="nf-earn-jobwallet-row-meta">{r.meta}</div>
+                    </div>
+                    <div className="nf-earn-jobwallet-row-kpi">
+                      <div style={{ fontWeight: 800 }}>{formatGBP(r.amount)}</div>
+                      <div className="nf-muted">{r.note}</div>
+                    </div>
+                  </div>
+                ))}
+
+                <div style={{ display: "flex", gap: 10, marginTop: 10 }}>
+                  <button
+                    className="nf-btn-primary"
+                    onClick={() => setToast({ type: "ok", msg: "Payout attempted → DAO Judge consulted and logged." })}
+                  >
+                    Attempt Payout
+                  </button>
+                  <button
+                    className="nf-btn-ghost"
+                    onClick={() => setToast({ type: "warn", msg: "Refund queued (demo). Wire to PaymentService + Revolut escrow." })}
+                  >
+                    Queue Refund
+                  </button>
+                </div>
+              </div>
+
+              <div className="nf-jobwallet-selected">
+                <JobWalletCard card={card} onOpenZoom={onOpenZoom} />
+              </div>
+            </div>
+          </>
+        );
+      }
+
+      function DaoCourtPanel({ court }) {
+        return (
+          <>
+            <PanelHeader
+              title="DAO Courtroom"
+              subtitle="Sentinel → Guardian → Judge: step-by-step reasoning (human readable)."
+              right={<span className="nf-pill">Explainable</span>}
+            />
+            <div className="nf-divider" />
+
+            {court.map((c, i) => (
+              <div key={i} className="nf-task-card">
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                  <div style={{ fontWeight: 900 }}>{c.actor}</div>
+                  <span className="nf-pill">{c.status}</span>
+                </div>
+                <div className="nf-muted" style={{ fontSize: 12, marginTop: 8, lineHeight: 1.5 }}>
+                  {c.message}
+                </div>
+                <div className="nf-job-wallet-strip" style={{ marginTop: 10 }}>
+                  <span className="nf-job-wallet-tag">Audit</span>
+                  <span>Logged: {c.time}</span>
+                </div>
+              </div>
+            ))}
+          </>
+        );
+      }
+
+      function CompliancePanel({ flags }) {
+        return (
+          <>
+            <PanelHeader
+              title="RAMS + Compliance"
+              subtitle="Audit-ready risk flags (SLA, insurance, certification, critical faults)."
+              right={<span className="nf-pill">DSS</span>}
+            />
+            <div className="nf-divider" />
+
+            {flags.map((f) => (
+              <div key={f.id} className="nf-task-card">
+                <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
+                  <div style={{ fontWeight: 900 }}>{f.title}</div>
+                  <span className={"nf-status-badge " + f.badgeClass}>{f.badge}</span>
+                </div>
+                <div className="nf-muted" style={{ fontSize: 12, marginTop: 8, lineHeight: 1.5 }}>
+                  {f.detail}
+                </div>
+              </div>
+            ))}
+          </>
+        );
+      }
+
+      function Toast({ toast, onClear }) {
+        useEffect(() => {
+          if (!toast) return;
+          const t = setTimeout(() => onClear?.(), 2600);
+          return () => clearTimeout(t);
+        }, [toast, onClear]);
+
+        if (!toast) return null;
+
+        const border =
+          toast.type === "ok"
+            ? "rgba(34,197,94,0.7)"
+            : toast.type === "warn"
+            ? "rgba(251,191,36,0.65)"
+            : "rgba(248,113,113,0.65)";
+
+        return (
+          <div
+            style={{
+              position: "fixed",
+              right: 18,
+              bottom: 18,
+              zIndex: 80,
+              width: 340,
+              borderRadius: 18,
+              padding: "12px 12px",
+              border: `1px solid ${border}`,
+              background: "radial-gradient(circle at 0 0, rgba(15,23,42,0.95), rgba(2,6,23,0.98))",
+              boxShadow: "0 22px 70px rgba(0,0,0,0.55)"
+            }}
+          >
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 10 }}>
+              <div>
+                <div style={{ fontWeight: 900, fontSize: 12 }}>System</div>
+                <div className="nf-muted" style={{ fontSize: 11, marginTop: 4, lineHeight: 1.45 }}>
+                  {toast.msg}
+                </div>
+              </div>
+              <button className="nf-btn-ghost" onClick={onClear} style={{ padding: "6px 10px", fontSize: 11 }}>
+                OK
+              </button>
+            </div>
+          </div>
+        );
+      }
+
+      /* ------------------------------- App -------------------------------- */
+
+      function App() {
+        const [theme, setTheme] = useState("dark");
+        const [activeId, setActiveId] = useState("overview");
+        const [live, setLive] = useState(true);
+
+        const [toast, setToast] = useState(null);
+
+        const [stats, setStats] = useState({
+          activeTickets: 6,
+          escrowBufferGBP: 1200,
+          payoutReady: 84,
+          slaRisk: 18
+        });
+
+        const [tasks, setTasks] = useState(() => [
+          {
+            id: "T-102991",
+            title: "Emergency boiler leak",
+            location: "Canary Wharf",
+            depositGBP: 200,
+            severity: "Standard",
+            status: "New",
+            isNew: false
+          },
+          {
+            id: "T-102774",
+            title: "Lift fault (HardStop)",
+            location: "Mayfair",
+            depositGBP: 200,
+            severity: "Critical",
+            status: "New",
+            isNew: false
+          }
+        ]);
+
+        const [selectedWalletId, setSelectedWalletId] = useState("W-1");
+        const walletRows = useMemo(
+          () => [
+            { id: "W-1", title: "Ticket buffer reserved", meta: "Escrow deposit held", amount: 200, note: "Active" },
+            { id: "W-2", title: "Diagnostics + travel", meta: "Engineer payout tranche", amount: 85, note: "Queued" },
+            { id: "W-3", title: "Materials uplift", meta: "Client approval required", amount: 60, note: "Pending" }
+          ],
+          []
+        );
+
+        const [card, setCard] = useState({
+          engineerName: "NOTFALL ENGINEER",
+          pan: "4821 9900 1933 7741",
+          depositGBP: 200,
+          balance: 200,
+          status: "Buffer Reserved"
+        });
+
+        const [zoomOpen, setZoomOpen] = useState(false);
+        const lastTapRef = useRef(0);
+
+        const [court, setCourt] = useState(() => [
+          {
+            actor: "Sentinel",
+            status: "Green",
+            message: "Escrow buffer confirmed. Ticket deposit sufficient for initial guarantee.",
+            time: "Just now"
+          },
+          {
+            actor: "Guardian",
+            status: "Pass",
+            message: "Engineer certification + insurance checks valid for this task category.",
+            time: "Just now"
+          },
+          {
+            actor: "Judge",
+            status: "Proceed",
+            message: "SLA risk acceptable. Authorised to attempt payout (log audit trail).",
+            time: "Just now"
+          }
+        ]);
+
+        const flags = useMemo(
+          () => [
+            {
+              id: "C1",
+              title: "Critical Fault Gate",
+              badge: "APPROVED",
+              badgeClass: "nf-status-approved",
+              detail: "HardStop faults are categorised as Critical and can be dispatched immediately."
+            },
+            {
+              id: "C2",
+              title: "Non-Critical Dispatch",
+              badge: "PENDING",
+              badgeClass: "nf-status-pending",
+              detail: "Non-critical faults require client approval before dispatch (prevents over-autopilot)."
+            },
+            {
+              id: "C3",
+              title: "Insurance + Certification",
+              badge: "APPROVED",
+              badgeClass: "nf-status-approved",
+              detail: "Engineer insurance documents are required and tracked in the certification pipeline."
+            }
+          ],
+          []
+        );
+
+        // WS simulation
+        useEffect(() => {
+          const ws = createMockWs({
+            onEvent: (evt) => {
+              if (evt.type === "TASK_NEW") {
+                setTasks((prev) => {
+                  const next = [
+                    { ...evt.payload, status: "New", isNew: true },
+                    ...prev.map((t) => ({ ...t, isNew: false }))
+                  ].slice(0, 7);
+                  return next;
+                });
+                setStats((s) => ({ ...s, activeTickets: s.activeTickets + 1 }));
+              }
+
+              if (evt.type === "DAO_JUDGE") {
+                setCourt((prev) => [
+                  {
+                    actor: "Judge",
+                    status: evt.payload.verdict,
+                    message: evt.payload.reason,
+                    time: new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })
+                  },
+                  ...prev.slice(0, 5)
+                ]);
+              }
+            }
+          });
+
+          return () => ws.close();
+        }, []);
+
+        // Double-tap / double-click zoom logic
+        function handleCardTapToZoom() {
+          const now = Date.now();
+          const last = lastTapRef.current;
+          lastTapRef.current = now;
+
+          if (now - last < 280) {
+            setZoomOpen(true);
+          }
+        }
+
+        // keep card in sync with wallet selection (demo)
+        useEffect(() => {
+          if (selectedWalletId === "W-1") setCard((c) => ({ ...c, balance: 200, status: "Buffer Reserved" }));
+          if (selectedWalletId === "W-2") setCard((c) => ({ ...c, balance: 115, status: "Tranche Queued" }));
+          if (selectedWalletId === "W-3") setCard((c) => ({ ...c, balance: 55, status: "Pending Approval" }));
+        }, [selectedWalletId]);
+
+        const rightContent = useMemo(() => {
+          if (activeId === "overview")
+            return <OverviewPanel stats={stats} setStats={setStats} />;
+
+          if (activeId === "taskInbox")
+            return <TaskInboxPanel tasks={tasks} setTasks={setTasks} setToast={setToast} />;
+
+          if (activeId === "earnings")
+            return (
+              <EarningsPanel
+                walletRows={walletRows}
+                selectedId={selectedWalletId}
+                setSelectedId={setSelectedWalletId}
+                card={card}
+                setToast={setToast}
+                onOpenZoom={handleCardTapToZoom}
+              />
+            );
+
+          if (activeId === "daoCourt") return <DaoCourtPanel court={court} />;
+
+          return <CompliancePanel flags={flags} />;
+        }, [activeId, stats, tasks, walletRows, selectedWalletId, card, court, flags]);
+
+        return (
+          <div className={"nf-root " + theme}>
+            <AppBar
+              theme={theme}
+              live={live}
+              onToggleTheme={() => setTheme((t) => (t === "dark" ? "light" : "dark"))}
+            />
+
+            <main className="nf-shell-bg">
+              <div className="nf-grid">
+                <Sidebar activeId={activeId} setActiveId={setActiveId} livePulse={live} />
+
+                <section className="nf-panel-main">
+                  <div className={"nf-main-border " + (activeId === "taskInbox" ? "nf-main-border-animating" : "")}>
+                    <div className="nf-main-border-inner" />
+                  </div>
+                  <div style={{ position: "relative", zIndex: 1 }}>{rightContent}</div>
+                </section>
+              </div>
+            </main>
+
+            <Toast toast={toast} onClear={() => setToast(null)} />
+
+            <OverlayModal
+              open={zoomOpen}
+              title="Job Wallet — Zoom"
+              onClose={() => setZoomOpen(false)}
+              footerLeft={<span className="nf-muted">Tip: ESC to close</span>}
+              footerRight={
+                <>
+                  <button
+                    className="nf-btn-ghost"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(card.pan);
+                      setToast({ type: "ok", msg: "Card number copied (demo)." });
+                    }}
+                  >
+                    Copy PAN
+                  </button>
+                  <button className="nf-btn-primary" onClick={() => setZoomOpen(false)}>
+                    Done
+                  </button>
+                </>
+              }
+            >
+              <div style={{ marginTop: 12 }}>
+                <div className="nf-muted" style={{ fontSize: 12, marginBottom: 10 }}>
+                  Keep zoom as an optional overlay only (no 3-layer duplication).
+                </div>
+
+                <div
+                  onDoubleClick={() => setZoomOpen(false)}
+                  style={{ display: "flex", justifyContent: "center" }}
+                >
+                  <div style={{ width: 420, maxWidth: "100%" }}>
+                    <div onClick={() => {}} style={{ pointerEvents: "none" }}>
+                      {/* Render same card, scaled naturally */}
+                      <div className="nf-jobwallet-card-shell">
+                        <div className="nf-jobwallet-card">
+                          <div className="nf-jobwallet-card-inner">
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <div className="nf-card-label">JOB WALLET</div>
+                              <div className="nf-jobwallet-chip-front" />
+                            </div>
+
+                            <div style={{ marginTop: 14, display: "flex", justifyContent: "space-between", gap: 12 }}>
+                              <div>
+                                <div className="nf-card-amount-digital glow">
+                                  £{card.balance}
+                                  <span className="currency">GBP</span>
+                                </div>
+                                <div className="nf-card-engineer">{card.engineerName}</div>
+                              </div>
+
+                              <div style={{ textAlign: "right" }}>
+                                <div className="nf-card-label">ID</div>
+                                <div className="nf-card-pan" style={{ marginTop: 6 }}>
+                                  {card.pan}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="nf-card-meta-row">
+                              <div>
+                                <div className="nf-card-meta-label">Deposit Buffer</div>
+                                <div className="nf-card-meta-value">{formatGBP(card.depositGBP)}</div>
+                              </div>
+                              <div style={{ textAlign: "right" }}>
+                                <div className="nf-card-meta-label">Status</div>
+                                <div className="nf-card-meta-value">{card.status}</div>
+                              </div>
+                            </div>
+
+                            <div className="nf-card-footer-text">
+                              Buffer covers the first guarantee tranche. Release remainder after client approval.
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="nf-card-modal-copy">
+                      Double-click to exit zoom (desktop). ESC works everywhere.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </OverlayModal>
+          </div>
+        );
+      }
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>

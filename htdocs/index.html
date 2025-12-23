@@ -1,0 +1,2932 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Notfall Engineers Real-time dispatch, coming soon</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Notfall Engineers is building the real-time dispatch layer for building services – with compliant escrow via Revolut and verifiable workflows on-chain."
+    />
+
+    <!-- Leaflet map (City of London + Canary Wharf) -->
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin=""
+    />
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+      crossorigin=""
+    ></script>
+
+    <style>
+      :root {
+        --bg-page: #f5f5f7;
+        --bg-card: #ffffff;
+        --bg-chip: #f2f3f7;
+        --bg-chip-soft: #e7ebff;
+        --border-soft: #e1e4ec;
+        --text-main: #111827;
+        --text-muted: #6b7280;
+        --text-soft: #9ca3af;
+        --accent: #2563ff;
+        --accent-strong: #0040ff;
+        --accent-soft: #e2e8ff;
+        --accent-green: #16a34a;
+        --accent-green-soft: #dcfce7;
+        --accent-red: #ef4444;
+        --danger-soft: #ffe5ea;
+        --danger-text: #b3261e;
+        --radius-card: 30px;
+        --radius-pill: 999px;
+        --shadow-soft: 0 26px 80px rgba(15, 23, 42, 0.09);
+        --font-sans: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text",
+          "Segoe UI", sans-serif;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+      }
+
+      body {
+        font-family: var(--font-sans);
+        background:
+          radial-gradient(circle at 0% 0%, #ffffff 0, #f5f5f7 55%, #e8edf7 100%);
+        color: var(--text-main);
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body.quantum-on .card,
+      body.quantum-on .hero-copy {
+        box-shadow: 0 30px 90px rgba(59, 130, 246, 0.4);
+      }
+
+      .page {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .appbar-shell {
+        position: sticky;
+        top: 0;
+        z-index: 40;
+        background: radial-gradient(circle at 0 0, #111827 0, #020617 50%, #111827 100%);
+        backdrop-filter: blur(22px);
+        border-bottom: 1px solid rgba(15, 23, 42, 0.6);
+      }
+
+      .shell {
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 14px 24px 40px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      /* Top nav / appbar */
+
+      .top-nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+      }
+
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 0;
+      }
+
+      .brand-mark {
+        width: 32px;
+        height: 32px;
+        border-radius: 13px;
+        background: conic-gradient(
+          from 170deg,
+          #2563ff,
+          #06b6d4,
+          #a855f7,
+          #2563ff
+        );
+        padding: 2px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.35);
+      }
+
+      .brand-mark-inner {
+        width: 100%;
+        height: 100%;
+        border-radius: inherit;
+        background: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .brand-mark-inner img {
+        width: 26px;
+        height: 26px;
+        display: block;
+      }
+
+      .brand-text-main {
+        font-weight: 600;
+        font-size: 15px;
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+      }
+
+      .brand-text-sub {
+        font-size: 12px;
+        color: var(--text-muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .nav-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+
+      .nav-pill {
+        padding: 5px 11px;
+        border-radius: var(--radius-pill);
+        background: linear-gradient(135deg, #020617, #111827);
+        border: 1px solid rgba(148, 163, 184, 0.6);
+        color: #e5e7eb;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        transition:
+          transform 80ms ease-out,
+          box-shadow 160ms ease-out,
+          border-color 160ms ease-out,
+          background 160ms ease-out,
+          filter 160ms ease-out;
+        white-space: nowrap;
+      }
+
+      .nav-pill strong {
+        color: #f9fafb;
+      }
+
+      .nav-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #22c55e;
+      }
+
+      .nav-pill-live {
+        background: radial-gradient(circle at 0 0, #b91c1c, #7f1d1d 55%, #020617 100%);
+        border-color: rgba(248, 113, 113, 0.9);
+        box-shadow: 0 0 16px rgba(248, 113, 113, 0.7);
+      }
+
+      .nav-dot-red {
+        background: var(--accent-red);
+      }
+
+      .nav-pill-quantum.nav-pill-on {
+        background: radial-gradient(circle at 0 0, #16a34a, #065f46 60%, #020617 100%);
+        border-color: rgba(74, 222, 128, 0.9);
+      }
+
+      .nav-pill:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.9);
+        filter: brightness(1.03);
+      }
+
+      .nav-pill:active {
+        transform: translateY(1px) scale(0.98);
+        box-shadow: 0 10px 22px rgba(15, 23, 42, 0.7);
+      }
+
+      .nav-pill-flash {
+        animation: pill-flash 260ms ease-out;
+      }
+
+      @keyframes pill-flash {
+        0% {
+          box-shadow: 0 0 0 0 rgba(250, 204, 21, 0);
+        }
+        45% {
+          box-shadow:
+            0 0 0 1px #facc15,
+            0 0 22px rgba(250, 204, 21, 0.95);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(250, 204, 21, 0);
+        }
+      }
+
+      /* Main content layout */
+
+      .main-shell {
+        max-width: 1160px;
+        margin: 0 auto;
+        padding: 28px 24px 40px;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .hero-grid {
+        flex: 1;
+        display: grid;
+        grid-template-columns: minmax(0, 1.22fr) minmax(0, 0.98fr);
+        gap: 40px;
+        align-items: center;
+      }
+
+      /* Left side – copy */
+
+      .hero-copy {
+        padding: 28px 28px 30px;
+        background: rgba(255, 255, 255, 0.96);
+        border-radius: var(--radius-card);
+        border: 1px solid rgba(226, 232, 240, 0.9);
+        backdrop-filter: blur(18px);
+        box-shadow: var(--shadow-soft);
+        transition: box-shadow 0.2s ease, transform 0.2s ease;
+      }
+
+      .hero-copy:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 32px 90px rgba(15, 23, 42, 0.16);
+      }
+
+      .eyebrow-row {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 18px;
+      }
+
+      .eyebrow-toggle {
+        padding: 5px 12px;
+        border-radius: var(--radius-pill);
+        font-size: 11px;
+        border: 1px solid rgba(22, 163, 74, 0.3);
+        background: radial-gradient(circle at 0 0, #ecfdf5 0, #bbf7d0 45%, #ecfdf5 100%);
+        color: #065f46;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        cursor: pointer;
+        transition:
+          background 0.18s ease,
+          color 0.18s ease,
+          box-shadow 0.18s ease,
+          transform 0.08s ease,
+          border-color 0.18s ease;
+      }
+
+      .eyebrow-toggle span.dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #16a34a;
+      }
+
+      .eyebrow-toggle.active {
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        color: #ffffff;
+        border-color: rgba(37, 99, 255, 0.9);
+        box-shadow: 0 10px 26px rgba(37, 99, 255, 0.55);
+      }
+
+      .eyebrow-toggle.active span.dot {
+        background: #4ade80;
+      }
+
+      .eyebrow-toggle:hover {
+        transform: translateY(-1px);
+      }
+
+      .eyebrow-toggle:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+
+      .hero-title {
+        font-size: clamp(34px, 3.4vw, 46px);
+        line-height: 1.04;
+        font-weight: 650;
+        letter-spacing: -0.035em;
+        margin: 0 0 16px;
+      }
+
+      .hero-title span.highlight {
+        color: var(--accent-strong);
+      }
+
+      .hero-subtitle {
+        font-size: 15px;
+        line-height: 1.6;
+        color: var(--text-muted);
+        margin: 0 0 18px;
+        max-width: 520px;
+      }
+
+      /* Dynamic info panel */
+
+      .role-info {
+        border-radius: 16px;
+        background: #f9fafb;
+        border: 1px solid #e5e7eb;
+        padding: 10px 12px 11px;
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .role-info-title {
+        font-size: 12px;
+        font-weight: 600;
+        color: #374151;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .role-info-title span.badge {
+        padding: 3px 8px;
+        border-radius: 999px;
+        background: #e0ecff;
+        color: #1d4ed8;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+      }
+
+      .role-info-body {
+        font-size: 12px;
+        color: #6b7280;
+        margin: 0;
+      }
+
+      .role-info-body strong {
+        color: #111827;
+        font-weight: 500;
+      }
+
+      .badge-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 22px;
+      }
+
+      .badge-pill {
+        padding: 6px 11px;
+        border-radius: var(--radius-pill);
+        font-size: 11px;
+        background: radial-gradient(circle at 0 0, #ecfdf5 0, #bbf7d0 45%, #ecfdf5 100%);
+        color: #065f46;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid rgba(22, 163, 74, 0.3);
+        cursor: pointer;
+        outline: none;
+        transition:
+          background 0.18s ease,
+          color 0.18s ease,
+          box-shadow 0.18s ease,
+          transform 0.08s ease,
+          border-color 0.18s ease;
+      }
+
+      .badge-pill .pill-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: var(--accent-green);
+      }
+
+      .badge-pill:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(148, 163, 184, 0.6);
+        background: radial-gradient(circle at 0 0, #bbf7d0 0, #22c55e 35%, #bbf7d0 100%);
+        color: #052e16;
+      }
+
+      .badge-pill:focus-visible {
+        outline: 2px solid var(--accent);
+        outline-offset: 1px;
+      }
+
+      .badge-pill.active {
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        color: #ffffff;
+        box-shadow: 0 14px 30px rgba(37, 99, 255, 0.65);
+        border-color: rgba(37, 99, 255, 0.9);
+      }
+
+      .badge-pill.active .pill-dot {
+        background: #4ade80;
+      }
+
+      .hero-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 14px;
+      }
+
+      .btn-primary {
+        padding: 11px 22px;
+        border-radius: var(--radius-pill);
+        border: none;
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        color: #ffffff;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        box-shadow: 0 18px 40px rgba(37, 99, 255, 0.5);
+        transition:
+          transform 0.12s ease,
+          box-shadow 0.12s ease,
+          filter 0.12s ease;
+      }
+
+      .btn-primary span.dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #4ade80;
+      }
+
+      .btn-secondary {
+        padding: 11px 20px;
+        border-radius: var(--radius-pill);
+        border: 1px solid #d4d7df;
+        background: #ffffff;
+        color: var(--text-main);
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition:
+          transform 0.12s ease,
+          box-shadow 0.12s ease,
+          border-color 0.12s ease;
+      }
+
+      .btn-primary:hover,
+      .btn-join:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 22px 50px rgba(37, 99, 255, 0.6);
+        filter: brightness(1.03);
+      }
+
+      .btn-secondary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 30px rgba(148, 163, 184, 0.6);
+        border-color: var(--accent);
+      }
+
+      .btn-join:active,
+      .btn-primary:active,
+      .btn-secondary:active {
+        transform: translateY(1px);
+        box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+      }
+
+      .hero-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        font-size: 11px;
+        color: var(--text-soft);
+        margin-top: 4px;
+      }
+
+      .hero-meta span {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+
+      .hero-meta span::before {
+        content: "•";
+        font-size: 12px;
+        color: #d1d5db;
+      }
+
+      .hero-meta span:first-child::before {
+        content: "";
+      }
+
+      /* Right side – card */
+
+      .card-wrap {
+        display: flex;
+        justify-content: flex-end;
+      }
+
+      .card {
+        width: 100%;
+        max-width: 420px;
+        border-radius: var(--radius-card);
+        background: radial-gradient(circle at 0% 0%, #f5f7ff 0, #ffffff 60%);
+        border: 1px solid var(--border-soft);
+        box-shadow: var(--shadow-soft);
+        padding: 18px 22px 16px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 32px 90px rgba(15, 23, 42, 0.2);
+      }
+
+      .card-media {
+        position: relative;
+        border-radius: 24px;
+        overflow: hidden;
+        margin: -4px -4px 14px;
+        height: 190px;
+        background: #020617;
+      }
+
+      .card-media-map {
+        width: 100%;
+        height: 100%;
+      }
+
+      .card-media-overlay {
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(
+          to top,
+          rgba(15, 23, 42, 0.65),
+          rgba(15, 23, 42, 0.05)
+        );
+        pointer-events: none;
+      }
+
+      .card-media-caption {
+        position: absolute;
+        left: 16px;
+        bottom: 14px;
+        color: #f9fafb;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        z-index: 2;
+      }
+
+      .card-media-caption span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 3px 9px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.78);
+        backdrop-filter: blur(8px);
+      }
+
+      .card-media-caption span::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #4ade80;
+      }
+
+      .live-ticket-marker {
+        width: 16px;
+        height: 16px;
+        border-radius: 999px;
+        background: var(--accent-red);
+        box-shadow: 0 0 16px rgba(239, 68, 68, 0.8);
+        position: relative;
+      }
+
+      .live-ticket-marker::after {
+        content: "";
+        position: absolute;
+        inset: -7px;
+        border-radius: 999px;
+        border: 2px solid rgba(239, 68, 68, 0.6);
+        animation: pulse 1.4s ease-out infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          transform: scale(0.7);
+          opacity: 0.9;
+        }
+        100% {
+          transform: scale(1.4);
+          opacity: 0;
+        }
+      }
+
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+
+      .card-title {
+        font-size: 14px;
+        font-weight: 600;
+        margin: 0 0 3px;
+      }
+
+      .card-subtitle {
+        font-size: 12px;
+        color: var(--text-muted);
+        margin: 0;
+      }
+
+      .card-tag {
+        padding: 4px 10px;
+        border-radius: var(--radius-pill);
+        font-size: 10px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        background: var(--danger-soft);
+        color: var(--danger-text);
+        white-space: nowrap;
+      }
+
+      /* Mini Task Inbox demo strip */
+
+      .task-demo {
+        margin: 10px 0 16px;
+        padding: 11px 13px;
+        border-radius: 20px;
+        background: radial-gradient(circle at 0% 0%, #1d4ed8 0, #020617 70%);
+        color: #e5e7eb;
+        box-shadow: 0 16px 36px rgba(15, 23, 42, 0.6);
+        cursor: default;
+        transition: box-shadow 0.18s ease, transform 0.18s ease;
+      }
+
+      .task-demo:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 22px 50px rgba(15, 23, 42, 0.8);
+      }
+
+      .task-demo-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        font-size: 11px;
+        margin-bottom: 6px;
+      }
+
+      .task-demo-title {
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .task-demo-title-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #22c55e;
+      }
+
+      .pill-live {
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(239, 68, 68, 0.08);
+        border: 1px solid var(--accent-red);
+        color: var(--accent-red);
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        font-weight: 600;
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.6);
+      }
+
+      .pill-awaiting {
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.7);
+        color: #9ca3af;
+        font-size: 10px;
+      }
+
+      .task-demo-body {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        font-size: 12px;
+        flex-wrap: wrap;
+      }
+
+      .task-demo-main {
+        min-width: 0;
+        flex: 1 1 60%;
+      }
+
+      .task-demo-main-title {
+        font-weight: 600;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .task-demo-main-meta {
+        font-size: 11px;
+        color: #cbd5f5;
+      }
+
+      .task-demo-pills {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 5px;
+      }
+
+      .task-demo-pill {
+        padding: 3px 7px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.72);
+        border: 1px solid rgba(55, 65, 81, 0.8);
+        font-size: 10px;
+      }
+
+      .task-demo-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-end;
+      }
+
+      .btn-task-primary,
+      .btn-task-secondary {
+        padding: 5px 12px;
+        border-radius: 999px;
+        font-size: 11px;
+        border: none;
+        cursor: pointer;
+        opacity: 0.95;
+        transition:
+          transform 0.12s ease,
+          box-shadow 0.12s ease,
+          filter 0.12s ease;
+      }
+
+      .btn-task-primary {
+        background: linear-gradient(135deg, #3b82f6, #2563eb);
+        color: #ffffff;
+        box-shadow: 0 10px 24px rgba(37, 99, 235, 0.55);
+      }
+
+      .btn-task-secondary {
+        background: rgba(15, 23, 42, 0.8);
+        color: #e5e7eb;
+        border: 1px solid rgba(55, 65, 81, 0.8);
+      }
+
+      .btn-task-primary span,
+      .btn-task-secondary span {
+        opacity: 0.7;
+      }
+
+      .btn-task-primary:hover,
+      .btn-task-secondary:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 16px 32px rgba(15, 23, 42, 0.9);
+        filter: brightness(1.03);
+      }
+
+      .btn-task-primary:active,
+      .btn-task-secondary:active {
+        transform: translateY(1px);
+        box-shadow: 0 10px 20px rgba(15, 23, 42, 0.7);
+      }
+
+      .btn-task-go {
+        margin-top: 4px;
+        width: 40px;
+        height: 40px;
+        border-radius: 999px;
+        border: none;
+        background: radial-gradient(circle at 30% 0, #1d4ed8, #0f172a 70%);
+        color: #f9fafb;
+        font-weight: 700;
+        font-size: 13px;
+        cursor: pointer;
+        opacity: 0;
+        pointer-events: none;
+        transform: scale(0.9);
+        transition:
+          opacity 0.18s ease,
+          transform 0.18s ease;
+      }
+
+      .btn-task-go.visible {
+        opacity: 1;
+        pointer-events: auto;
+        transform: scale(1);
+      }
+
+      .btn-task-go.active {
+        background: radial-gradient(circle at 30% 0, #facc15, #f97316 70%);
+        color: #111827;
+        animation: go-pulse 1.4s ease-out infinite;
+      }
+
+      @keyframes go-pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(250, 204, 21, 0.8);
+        }
+        70% {
+          box-shadow: 0 0 0 14px rgba(250, 204, 21, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(250, 204, 21, 0);
+        }
+      }
+
+      .card-divider {
+        margin: 10px 0 14px;
+        height: 1px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          rgba(209, 213, 219, 0.85),
+          transparent
+        );
+      }
+
+      .waitlist-form {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 12px;
+        max-height: 0;
+        opacity: 0;
+        overflow: hidden;
+        transform: translateY(-4px);
+        pointer-events: none;
+        transition:
+          max-height 0.35s ease,
+          opacity 0.25s ease,
+          transform 0.25s ease;
+      }
+    /* 2-step wizard: show only the active step, but keep the grid layout */
+.wl-step {
+  display: none;
+}
+.wl-step.wl-step-active {
+  display: contents; /* children still participate in the grid */
+}
+
+/* Section framing for interests / 10-10 / referrer */
+.form-section {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+}
+.form-section.full {
+  grid-column: 1 / -1;
+}
+
+.form-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.form-section-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+}
+.form-section-hint {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* Interest pills block */
+.interest-pill-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.role-hint {
+  margin-top: 6px;
+  font-size: 11px;
+  color: #6b7280;
+}
+
+/* Slightly taller 10/10 area */
+.field-10of10 textarea {
+  min-height: 68px;
+}
+
+/* Stronger selected state for interest pills */
+.wl-interest-pill.active {
+  background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+  color: #ffffff;
+  border-color: rgba(37, 99, 255, 0.9);
+  box-shadow: 0 10px 26px rgba(37, 99, 255, 0.55);
+}
+.wl-interest-pill.active .pill-dot {
+  background: #4ade80;
+}
+
+/* Screen-reader only (used for internal labels) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+
+      .card.waitlist-open .waitlist-form {
+        max-height: 900px;
+        opacity: 1;
+        transform: translateY(0);
+        pointer-events: auto;
+      }
+
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 12px;
+      }
+
+      .field.full {
+        grid-column: 1 / -1;
+      }
+
+      .field label {
+        color: #6b7280;
+      }
+
+      .field input,
+      .field select,
+      .field textarea {
+        border-radius: 12px;
+        border: 1px solid #d1d5db;
+        padding: 9px 10px;
+        font-size: 13px;
+        font-family: var(--font-sans);
+        background: #f9fafb;
+        outline: none;
+        transition:
+          border-color 0.18s ease,
+          box-shadow 0.18s ease,
+          background-color 0.18s ease,
+          transform 0.08s ease;
+      }
+
+      .field textarea {
+        min-height: 56px;
+        resize: vertical;
+      }
+
+      .field input:focus,
+      .field select:focus,
+      .field textarea:focus {
+        border-color: var(--accent);
+        background: #ffffff;
+        box-shadow: 0 0 0 1px rgba(37, 99, 255, 0.28);
+      }
+
+      .btn-join {
+        width: 100%;
+        padding: 10px 16px;
+        border-radius: 14px;
+        border: none;
+        background: linear-gradient(135deg, var(--accent), var(--accent-strong));
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        box-shadow: 0 16px 36px rgba(37, 99, 255, 0.5);
+        transition:
+          transform 0.12s ease,
+          box-shadow 0.12s ease,
+          filter 0.12s ease;
+      }
+
+      .waitlist-meta {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+        margin-top: 6px;
+        font-size: 11px;
+        color: var(--text-soft);
+      }
+
+      .latency-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 9px;
+        border-radius: var(--radius-pill);
+        background: #e7f7ec;
+        color: #167b3b;
+      }
+
+      .latency-pill span.dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 999px;
+        background: #16a34a;
+      }
+
+      /* Footer */
+
+      .footer {
+        padding-top: 20px;
+        margin-top: 36px;
+        border-top: 1px solid #e5e7eb;
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 8px;
+        font-size: 11px;
+        color: #9ca3af;
+      }
+
+      .footer a {
+        color: #9ca3af;
+        text-decoration: none;
+      }
+
+      .footer a:hover {
+        text-decoration: underline;
+      }
+
+      /* Overlays (wallet + court) */
+
+      .overlay-root {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.22s ease;
+        z-index: 80;
+      }
+
+      .overlay-root.visible {
+        opacity: 1;
+        pointer-events: auto;
+      }
+
+      .overlay-backdrop {
+        position: absolute;
+        inset: 0;
+        background: radial-gradient(circle at 0 0, rgba(15, 23, 42, 0.7), rgba(15, 23, 42, 0.95));
+        backdrop-filter: blur(18px);
+      }
+
+      .overlay-panel {
+        position: relative;
+        max-width: 1040px;
+        width: calc(100% - 40px);
+        max-height: calc(100% - 80px);
+        padding: 22px 24px 22px;
+        border-radius: 26px;
+        background: radial-gradient(circle at 0 0, #1d283a 0, #020617 60%, #020617 100%);
+        color: #e5e7eb;
+        box-shadow: 0 40px 120px rgba(0, 0, 0, 0.8);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .overlay-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        margin-bottom: 12px;
+      }
+
+      .overlay-title {
+        font-size: 15px;
+        font-weight: 600;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: #bfdbfe;
+      }
+
+      .overlay-subtitle {
+        font-size: 12px;
+        color: #9ca3af;
+      }
+
+      .overlay-close {
+        border: none;
+        border-radius: 999px;
+        padding: 6px 10px;
+        background: rgba(15, 23, 42, 0.8);
+        color: #e5e7eb;
+        font-size: 11px;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .overlay-close:hover {
+        background: rgba(15, 23, 42, 1);
+      }
+
+      /* Wallet layout */
+
+      .wallet-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+        gap: 22px;
+        margin-top: 10px;
+      }
+
+      .wallet-panel-left,
+      .wallet-panel-right {
+        background: radial-gradient(circle at 0 0, #020617 0, #020617 50%, #000 100%);
+        border-radius: 22px;
+        border: 1px solid rgba(148, 163, 184, 0.4);
+        padding: 14px 16px 16px;
+      }
+
+      .wallet-tabs,
+      .wallet-range-tabs {
+        display: inline-flex;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 3px;
+        background: rgba(15, 23, 42, 0.9);
+      }
+
+      .wallet-tab,
+      .wallet-range-tab {
+        border-radius: 999px;
+        padding: 6px 12px;
+        border: none;
+        background: transparent;
+        color: #9ca3af;
+        font-size: 11px;
+        cursor: pointer;
+      }
+
+      .wallet-tab.active,
+      .wallet-range-tab.active {
+        background: radial-gradient(circle at 0 0, #1d4ed8, #1e3a8a 60%);
+        color: #f9fafb;
+        box-shadow: 0 10px 28px rgba(37, 99, 235, 0.6);
+      }
+
+      .wallet-summary-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        margin-top: 14px;
+        font-size: 12px;
+      }
+
+      .wallet-summary-card {
+        border-radius: 16px;
+        padding: 10px 10px 11px;
+        background: radial-gradient(circle at 0 0, #020617 0, #020617 60%, #020617 100%);
+        border: 1px solid rgba(55, 65, 81, 0.9);
+      }
+
+      .wallet-summary-label {
+        font-size: 11px;
+        color: #9ca3af;
+        margin-bottom: 4px;
+      }
+
+      .wallet-summary-value {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 2px;
+      }
+
+      .wallet-summary-sub {
+        font-size: 11px;
+        color: #64748b;
+      }
+
+      .wallet-chart {
+        margin-top: 14px;
+        border-radius: 18px;
+        padding: 12px 12px 10px;
+        background: radial-gradient(circle at 0 0, #020617 0, #020617 50%, #020617 100%);
+        border: 1px solid rgba(51, 65, 85, 0.9);
+        font-size: 11px;
+      }
+
+      .wallet-chart-bars {
+        margin-top: 10px;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 10px;
+        align-items: flex-end;
+      }
+
+      .wallet-bar {
+        position: relative;
+        height: 80px;
+        border-radius: 999px;
+        background: linear-gradient(to top, #020617, #020617);
+        overflow: hidden;
+        border: 1px solid rgba(30, 64, 175, 0.8);
+      }
+
+      .wallet-bar-fill {
+        position: absolute;
+        inset: auto 0 0 0;
+        height: 0%;
+        background: linear-gradient(to top, #60a5fa, #22d3ee);
+        transition: height 0.35s ease;
+      }
+
+      .wallet-bar-label {
+        margin-top: 6px;
+        text-align: center;
+        color: #9ca3af;
+        font-size: 11px;
+      }
+
+      .wallet-bar-value {
+        position: absolute;
+        top: 6px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 10px;
+        color: #e5e7eb;
+      }
+
+      .wallet-jobs-title {
+        font-size: 12px;
+        color: #9ca3af;
+        margin-bottom: 8px;
+      }
+
+      .wallet-job-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        max-height: 190px;
+        overflow-y: auto;
+        border-radius: 14px;
+        background: rgba(15, 23, 42, 0.85);
+        border: 1px solid rgba(30, 64, 175, 0.9);
+      }
+
+      .wallet-job-item {
+        padding: 8px 10px;
+        border-bottom: 1px solid rgba(31, 41, 55, 0.9);
+        font-size: 11px;
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+      }
+
+      .wallet-job-item:last-child {
+        border-bottom: none;
+      }
+
+      .wallet-job-main {
+        color: #f9fafb;
+      }
+
+      .wallet-job-meta {
+        color: #94a3b8;
+      }
+
+      .wallet-job-amount {
+        white-space: nowrap;
+        font-weight: 600;
+        color: #bbf7d0;
+      }
+
+      .wallet-card {
+        border-radius: 18px;
+        padding: 14px 16px;
+        background: radial-gradient(circle at 0 0, #1d4ed8 0, #020617 70%);
+        border: 1px solid rgba(96, 165, 250, 0.9);
+        box-shadow: 0 20px 50px rgba(15, 23, 42, 0.8);
+        font-size: 12px;
+        color: #e5e7eb;
+      }
+
+      .wallet-card-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+      }
+
+      .wallet-card-label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #bfdbfe;
+      }
+
+      .wallet-card-buffer {
+        font-size: 26px;
+        font-weight: 700;
+      }
+
+      .wallet-card-buffer span.currency {
+        font-size: 16px;
+        margin-left: 2px;
+      }
+
+      .wallet-card-footer {
+        margin-top: 8px;
+        font-size: 11px;
+        color: #cbd5f5;
+      }
+
+      /* Quantum court */
+
+      .court-layout {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+        gap: 18px;
+        margin-top: 10px;
+      }
+
+      .court-column {
+        border-radius: 18px;
+        padding: 12px 14px 14px;
+        background: radial-gradient(circle at 0 0, #020617 0, #020617 60%, #000 100%);
+        border: 1px solid rgba(55, 65, 81, 0.9);
+        font-size: 12px;
+      }
+
+      .court-rail {
+        display: flex;
+        gap: 6px;
+        font-size: 11px;
+        margin-bottom: 10px;
+      }
+
+      .court-pill {
+        padding: 4px 8px;
+        border-radius: 999px;
+        background: rgba(15, 23, 42, 0.9);
+        border: 1px solid rgba(75, 85, 99, 0.9);
+        color: #e5e7eb;
+      }
+
+      .court-case-list {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        max-height: 190px;
+        overflow-y: auto;
+      }
+
+      .court-case-row {
+        width: 100%;
+        text-align: left;
+        padding: 7px 9px;
+        margin-bottom: 4px;
+        border-radius: 12px;
+        border: 1px solid rgba(55, 65, 81, 0.9);
+        background: radial-gradient(circle at 0 0, #020617 0, #020617 60%);
+        color: #e5e7eb;
+        font-size: 11px;
+        cursor: pointer;
+      }
+
+      .court-case-row span.case-tag {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: #93c5fd;
+      }
+
+      .court-verdict-title {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.09em;
+        color: #bfdbfe;
+        margin-bottom: 6px;
+      }
+
+      .court-verdict-body {
+        font-size: 12px;
+        color: #e5e7eb;
+      }
+
+      .court-actions {
+        margin-top: 10px;
+      }
+
+      .court-simulate-btn {
+        border-radius: 999px;
+        border: none;
+        padding: 7px 14px;
+        background: radial-gradient(circle at 0 0, #22c55e, #15803d 60%);
+        color: #022c22;
+        font-size: 11px;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 16px 36px rgba(34, 197, 94, 0.6);
+      }
+
+      .court-simulate-btn:hover {
+        filter: brightness(1.05);
+      }
+
+      /* Toast */
+
+      .toast {
+        position: fixed;
+        bottom: 18px;
+        left: 50%;
+        transform: translateX(-50%) translateY(18px);
+        padding: 9px 14px;
+        border-radius: 999px;
+        background: #111827;
+        color: #f9fafb;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.18s ease, transform 0.18s ease;
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.38);
+        z-index: 90;
+      }
+
+      .toast.visible {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+        pointer-events: auto;
+      }
+
+      .toast-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 999px;
+        background: #4ade80;
+      }
+
+      /* Reduced motion */
+
+      @media (prefers-reduced-motion: reduce) {
+        * {
+          scroll-behavior: auto !important;
+          animation-duration: 0.01ms !important;
+          animation-iteration-count: 1 !important;
+          transition-duration: 0.01ms !important;
+        }
+      }
+
+      /* Responsive breakpoints */
+
+      @media (max-width: 980px) {
+        .hero-grid {
+          grid-template-columns: minmax(0, 1fr);
+          gap: 24px;
+        }
+
+        .hero-copy {
+          order: 1;
+        }
+
+        .card-wrap {
+          justify-content: flex-start;
+          order: 2;
+        }
+
+        .card {
+          max-width: 100%;
+        }
+
+        .card-media {
+          height: 200px;
+        }
+
+        .wallet-layout,
+        .court-layout {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
+      @media (max-width: 640px) {
+        .shell,
+        .main-shell {
+          padding: 14px 16px 30px;
+        }
+
+        .top-nav {
+          flex-direction: row;
+          align-items: center;
+        }
+
+        .hero-grid {
+          gap: 20px;
+        }
+
+        .hero-copy {
+          padding: 20px 18px 22px;
+          border-radius: 22px;
+        }
+
+        .card {
+          padding: 16px 16px 14px;
+          border-radius: 22px;
+        }
+
+        .card-media {
+          margin: -8px -8px 12px;
+          height: 220px;
+          border-radius: 24px;
+        }
+
+        .waitlist-form {
+          grid-template-columns: 1fr;
+        }
+
+        .waitlist-meta {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+
+        .hero-actions {
+          flex-direction: column;
+        }
+
+        .btn-primary,
+        .btn-secondary {
+          width: 100%;
+          justify-content: center;
+        }
+
+        .task-demo-actions {
+          flex-direction: row;
+          align-items: center;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <!-- Appbar -->
+      <div class="appbar-shell">
+        <div class="shell" style="padding-bottom: 10px;">
+          <header class="top-nav">
+            <div class="brand">
+              <div class="brand-mark">
+                <div class="brand-mark-inner">
+                  <img src="./demo/assets/notfall-logo.png" alt="Notfall Engineers logo" />
+                </div>
+              </div>
+              <div>
+                <div class="brand-text-main">Notfall Engineers</div>
+                <div class="brand-text-sub">
+                  Real-time building services · UK → EU rollout
+                </div>
+              </div>
+            </div>
+
+            <div class="nav-right">
+              <button
+                class="nav-pill"
+                type="button"
+                id="nav-private"
+              >
+                <span class="nav-dot"></span>
+                <span><strong>BOOK DEMO </strong></span>
+              </button>
+
+              <button
+                class="nav-pill nav-pill-live"
+                type="button"
+                id="nav-live"
+              >
+                <span class="nav-dot nav-dot-red"></span>
+                <span><strong>SIMULATED LIVE BETA</strong></span>
+              </button>
+
+              <button
+                class="nav-pill nav-pill-quantum"
+                type="button"
+                id="nav-quantum"
+                role="button"
+                aria-pressed="false"
+              >
+                <span class="nav-dot"></span>
+                <span><strong>DAO AI AGENT</strong>&nbsp;·&nbsp;OFF</span>
+              </button>
+
+              <button
+                class="nav-pill"
+                type="button"
+                id="nav-wallet"
+              >
+                <span class="nav-dot"></span>
+                <span><strong>REVOLUT ESCROW ADAPTOR</strong></span>
+              </button>
+            </div>
+          </header>
+        </div>
+      </div>
+
+      <!-- Main content -->
+      <main class="main-shell">
+        <section class="hero-grid" aria-label="Notfall coming soon">
+          <!-- Left: copy -->
+          <div class="hero-copy">
+            <div
+              class="eyebrow-row"
+              role="tablist"
+              aria-label="Notfall information modes"
+            >
+              <button
+                class="eyebrow-toggle active"
+                type="button"
+                role="tab"
+                aria-selected="true"
+                data-info-key="notfall"
+              >
+                <span class="dot"></span>
+                Notfall Engineers
+              </button>
+              <button
+                class="eyebrow-toggle"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                data-info-key="realtime"
+              >
+                <span class="dot"></span>
+                Real-time building services
+              </button>
+              <button
+                class="eyebrow-toggle"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                data-info-key="dao"
+              >
+                <span class="dot"></span>
+                DAO-certified
+              </button>
+              <button
+                class="eyebrow-toggle"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                data-info-key="about"
+              >
+                <span class="dot"></span>
+                About us
+              </button>
+            </div>
+
+            <h1 class="hero-title">
+              We’re wiring the <span class="highlight">engineer dispatch layer</span> for cities.
+            </h1>
+
+            <p class="hero-subtitle">
+              Notfall connects property managers, engineers and PLCs into one verifiable
+              workflow, with compliant escrow via Revolut and on-chain auditability in
+              NFTL.
+            </p>
+
+            <div class="role-info" id="role-info" aria-live="polite">
+              <div class="role-info-title">
+                <span class="badge" id="role-info-badge">Platform view</span>
+                <span id="role-info-title">Notfall Engineers as your neutral dispatch layer.</span>
+              </div>
+              <p class="role-info-body" id="role-info-body">
+                For <strong>strong FM teams and landlords</strong>, Notfall becomes the single,
+                regulated surface where tasks, engineers and spend are orchestrated. You keep
+                approvals; the DAO guarantees workflow integrity and an immutable history of every visit.
+              </p>
+            </div>
+
+            <!-- Feature pills -->
+            <div class="badge-row">
+              <button
+                class="badge-pill feature-pill"
+                type="button"
+                data-feature-key="dispatch"
+              >
+                <span class="pill-dot"></span>
+                Real-time dispatch
+              </button>
+
+              <button
+                class="badge-pill feature-pill"
+                type="button"
+                data-feature-key="escrow"
+              >
+                <span class="pill-dot"></span>
+                Revolut-backed escrow rails
+              </button>
+
+              <button
+                class="badge-pill feature-pill"
+                type="button"
+                data-feature-key="governance"
+              >
+                <span class="pill-dot"></span>
+                DAO governance &amp; RAMS
+              </button>
+            </div>
+
+            <div class="hero-actions">
+              <button
+                class="btn-primary"
+                type="button"
+                onclick="window.location.href='/demo'"
+              >
+                <span class="dot"></span>
+                Open live demo
+              </button>
+
+              <button
+                class="btn-secondary"
+                type="button"
+                id="hero-join-btn"
+              >
+                Join DAO waitlist
+              </button>
+            </div>
+
+            <div class="hero-meta">
+              <span>Phase: Private beta</span>
+              <span>Regions: UK first, EU next</span>
+              <span>Use cases: FM, landlords, industrial</span>
+            </div>
+          </div>
+
+          <!-- Right: Waitlist card with live map & Task Inbox demo -->
+          <div class="card-wrap">
+            <section class="card" aria-label="DAO waitlist" id="waitlist-card">
+              <div class="card-media">
+                <div id="notfall-map" class="card-media-map" aria-hidden="true"></div>
+                <div class="card-media-overlay"></div>
+                <div class="card-media-caption">
+                  <span>Canary Wharf · London E14</span>
+                </div>
+              </div>
+
+              <div class="card-header">
+                <div>
+                  <h2 class="card-title">Reserve your Notfall node</h2>
+                  <p class="card-subtitle">
+                    Tell us who you are and we’ll reach out as we onboard engineers, partners
+                    and pilot customers into the DAO.
+                  </p>
+                </div>
+                <span class="card-tag">DAO NODE WAITLIST</span>
+              </div>
+
+              <!-- Mini Task Inbox demo -->
+              <div class="task-demo" aria-label="Live task stream demo">
+                <div class="task-demo-header">
+                  <div class="task-demo-title">
+                    <span class="task-demo-title-dot"></span>
+                    Task Inbox · demo stream
+                    <span class="pill-live">LIVE BETA</span>
+                  </div>
+                  <div class="pill-awaiting" id="task-demo-status">Waiting for DAO approval</div>
+                </div>
+
+                <div class="task-demo-body">
+                  <div class="task-demo-main">
+                    <div class="task-demo-main-title" id="task-demo-title">
+                      Emergency boiler leak · Devonshire Square EC2
+                    </div>
+                    <div class="task-demo-main-meta" id="task-demo-meta">
+                      ID T-101 · 35m ago · Status: NEW · Est. £200
+                    </div>
+                    <div class="task-demo-pills">
+                      <span class="task-demo-pill" id="task-pill-1">Priority: High</span>
+                      <span class="task-demo-pill" id="task-pill-2">RAMS incomplete</span>
+                      <span class="task-demo-pill" id="task-pill-3">SLA not set</span>
+                    </div>
+                  </div>
+
+                  <div class="task-demo-actions">
+                    <button class="btn-task-primary" type="button" id="btn-accept">
+                      Accept <span>(demo)</span>
+                    </button>
+                    <button class="btn-task-secondary" type="button" id="btn-decline">
+                      Decline <span>(demo)</span>
+                    </button>
+                    <button
+                      class="btn-task-go"
+                      type="button"
+                      id="btn-go"
+                      aria-label="Navigate to task"
+                      hidden
+                    >
+                      GO
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-divider" aria-hidden="true"></div>
+
+              <!-- Waitlist form (hidden until Join DAO waitlist is clicked) -->
+              <form class="waitlist-form" id="waitlist-form">
+                <div class="field">
+                  <label for="wl-name">Full name</label>
+                  <input
+                    id="wl-name"
+                    name="fullName"
+                    type="text"
+                    autocomplete="name"
+                    placeholder="e.g. Jordan Smith"
+                    required
+                  />
+                </div>
+
+                <div class="field">
+                  <label for="wl-email">Work email</label>
+                  <input
+                    id="wl-email"
+                    name="workEmail"
+                    type="email"
+                    autocomplete="email"
+                    placeholder="you@company.com"
+                    required
+                  />
+                </div>
+
+                <div class="field">
+                  <label for="wl-role">I’m primarily a...</label>
+                  <select id="wl-role" name="persona" required>
+                    <option value="">Select role</option>
+                    <option value="fm">FM . Property manager</option>
+                    <option value="landlord">Landlord . Portfolio owner</option>
+                    <option value="engineer">Independent engineer . SME</option>
+                    <option value="industrial">Industrial . PLC operator</option>
+                    <option value="partner">Strategic partner . VC</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div class="field">
+                  <label for="wl-region">Country / region</label>
+                  <input
+                    id="wl-region"
+                    name="region"
+                    type="text"
+                    placeholder="e.g. UK – London"
+                    required
+                  />
+                </div>
+
+                <div class="field">
+                  <label for="wl-interest">What are you most interested in? <span style="color:#9ca3af;">(optional)</span></label>
+                  <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                    <button type="button" class="badge-pill wl-interest-pill" data-value="faster">
+                      <span class="pill-dot"></span> Faster emergency call-outs
+                    </button>
+                    <button type="button" class="badge-pill wl-interest-pill" data-value="compliance">
+                      <span class="pill-dot"></span> Compliance &amp; RAMS automation
+                    </button>
+                    <button type="button" class="badge-pill wl-interest-pill" data-value="sla">
+                      <span class="pill-dot"></span> SLA visibility across sites
+                    </button>
+                    <button type="button" class="badge-pill wl-interest-pill" data-value="cost">
+                      <span class="pill-dot"></span> Cost &amp; invoice transparency
+                    </button>
+                  </div>
+                  <input type="hidden" id="wl-interest-hidden" name="interests" />
+                </div>
+
+                <div class="field">
+                  <label for="wl-10">What would make Notfall a 10/10 for you? <span style="color:#9ca3af;">(optional)</span></label>
+                  <textarea
+                    id="wl-10"
+                    name="tenOutOfTen"
+                    placeholder="One line – e.g. “Real-time visibility across all my sites.”"
+                  ></textarea>
+                </div>
+
+                <div class="field">
+                  <label for="wl-ref">How did you hear about Notfall? <span style="color:#9ca3af;">(optional)</span></label>
+                  <select id="wl-ref" name="referrer">
+                    <option value="">Select one</option>
+                    <option value="google">Google / search</option>
+                    <option value="linkedin">LinkedIn</option>
+                    <option value="fm-forum">FM forum / industry group</option>
+                    <option value="friend">Friend / colleague</option>
+                    <option value="event">Conference / meetup</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+
+                <div class="field full">
+                  <button class="btn-join" type="submit">Join waitlist</button>
+                </div>
+
+                <div class="waitlist-meta">
+                  <div class="latency-pill">
+                    <span class="dot"></span>
+                    <span>42 ms DAO latency (simulated)</span>
+                  </div>
+                  <div>We’ll only email about pilot access &amp; DAO updates.</div>
+                </div>
+              </form>
+            </section>
+          </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="footer">
+          <div>© Notfall Engineers Ltd – Private beta</div>
+          <div>
+            <a href="#">Privacy</a> · <a href="#">Terms</a> · <a href="#">Status</a>
+          </div>
+        </footer>
+      </main>
+
+      <!-- Wallet overlay -->
+      <div
+        class="overlay-root"
+        id="wallet-overlay"
+        aria-hidden="true"
+      >
+        <div class="overlay-backdrop" data-overlay-close="wallet"></div>
+        <section
+          class="overlay-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="wallet-title"
+        >
+          <div class="overlay-header">
+            <div>
+              <div class="overlay-title" id="wallet-title">Earnings &amp; NFTL</div>
+              <div class="overlay-subtitle">
+                Fiat payouts via Revolut and on-chain NFTL rewards, side by side.
+              </div>
+            </div>
+            <button
+              class="overlay-close"
+              type="button"
+              data-overlay-close="wallet"
+            >
+              ✕ Close
+            </button>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:6px;">
+            <div class="wallet-tabs">
+              <button class="wallet-tab active" type="button" id="wallet-tab-overview">Overview</button>
+              <button class="wallet-tab" type="button" id="wallet-tab-jobs">Job wallets</button>
+            </div>
+
+            <div class="wallet-range-tabs">
+              <button class="wallet-range-tab active" type="button" data-period="day">Day</button>
+              <button class="wallet-range-tab" type="button" data-period="week">Week</button>
+              <button class="wallet-range-tab" type="button" data-period="month">Month</button>
+              <button class="wallet-range-tab" type="button" data-period="year">Year</button>
+            </div>
+          </div>
+
+          <div class="wallet-layout" id="wallet-layout">
+            <div class="wallet-panel-left">
+              <div class="wallet-summary-grid">
+                <div class="wallet-summary-card">
+                  <div class="wallet-summary-label">Today</div>
+                  <div class="wallet-summary-value" id="wallet-total-day">£0</div>
+                  <div class="wallet-summary-sub" id="wallet-total-day-nftl">0 NFTL</div>
+                </div>
+                <div class="wallet-summary-card">
+                  <div class="wallet-summary-label">This week</div>
+                  <div class="wallet-summary-value" id="wallet-total-week">£0</div>
+                  <div class="wallet-summary-sub" id="wallet-total-week-nftl">0 NFTL</div>
+                </div>
+                <div class="wallet-summary-card">
+                  <div class="wallet-summary-label">This month</div>
+                  <div class="wallet-summary-value" id="wallet-total-month">£0</div>
+                  <div class="wallet-summary-sub" id="wallet-total-month-nftl">0 NFTL</div>
+                </div>
+                <div class="wallet-summary-card">
+                  <div class="wallet-summary-label">Year to date</div>
+                  <div class="wallet-summary-value" id="wallet-total-year">£0</div>
+                  <div class="wallet-summary-sub" id="wallet-total-year-nftl">0 NFTL</div>
+                </div>
+              </div>
+
+              <div class="wallet-chart">
+                <div style="display:flex;justify-content:space-between;align-items:center;">
+                  <div>Today - earnings by hour (simulated)</div>
+                  <div id="wallet-chart-caption" style="color:#93c5fd;">£0 · NFTL mirrored 1:1 in DAO view</div>
+                </div>
+                <div class="wallet-chart-bars">
+                  <div>
+                    <div class="wallet-bar">
+                      <div class="wallet-bar-fill" id="wallet-bar-fill-day"></div>
+                      <div class="wallet-bar-value" id="wallet-bar-label-day">£0</div>
+                    </div>
+                    <div class="wallet-bar-label">Day</div>
+                  </div>
+                  <div>
+                    <div class="wallet-bar">
+                      <div class="wallet-bar-fill" id="wallet-bar-fill-week"></div>
+                      <div class="wallet-bar-value" id="wallet-bar-label-week">£0</div>
+                    </div>
+                    <div class="wallet-bar-label">Week</div>
+                  </div>
+                  <div>
+                    <div class="wallet-bar">
+                      <div class="wallet-bar-fill" id="wallet-bar-fill-month"></div>
+                      <div class="wallet-bar-value" id="wallet-bar-label-month">£0</div>
+                    </div>
+                    <div class="wallet-bar-label">Month</div>
+                  </div>
+                  <div>
+                    <div class="wallet-bar">
+                      <div class="wallet-bar-fill" id="wallet-bar-fill-year"></div>
+                      <div class="wallet-bar-value" id="wallet-bar-label-year">£0</div>
+                    </div>
+                    <div class="wallet-bar-label">Year</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="wallet-panel-right">
+              <div class="wallet-jobs-title">
+                Live Job Wallets. Each accepted task becomes a time-bound card on Revolut.
+              </div>
+              <ul class="wallet-job-list" id="wallet-job-list">
+                <!-- jobs injected here -->
+              </ul>
+
+              <div style="margin-top:10px;">
+                <div class="wallet-card">
+                  <div class="wallet-card-row">
+                    <div>
+                      <div class="wallet-card-label">Notfall · Job Wallet</div>
+                      <div id="wallet-card-title">No active job wallet yet</div>
+                    </div>
+                    <div class="wallet-card-buffer" id="wallet-card-buffer">
+                      £0<span class="currency"> GBP</span>
+                    </div>
+                  </div>
+                  <div class="wallet-card-row" style="margin-bottom:4px;">
+                    <div>Task</div>
+                    <div id="wallet-card-task">Accept a demo ticket to preview.</div>
+                  </div>
+                  <div class="wallet-card-row" style="font-size:11px;">
+                    <div>Valid thru</div>
+                    <div id="wallet-card-valid">—</div>
+                  </div>
+                  <div class="wallet-card-footer">
+                    Materials &amp; emergency spend only. Any unused buffer automatically
+                    returns to client &amp; DAO ledger on completion.
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Quantum court overlay -->
+      <div
+        class="overlay-root"
+        id="court-overlay"
+        aria-hidden="true"
+      >
+        <div class="overlay-backdrop" data-overlay-close="court"></div>
+        <section
+          class="overlay-panel"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="court-title"
+        >
+          <div class="overlay-header">
+            <div>
+              <div class="overlay-title" id="court-title">DAO GOVERNANCE</div>
+              <div class="overlay-subtitle">
+                Sentinel → Guardian → Judge. Every payout, dispatch and DAO decision is scanned for anomalies before funds move.
+              </div>
+            </div>
+            <button
+              class="overlay-close"
+              type="button"
+              data-overlay-close="court"
+            >
+              ✕ Close
+            </button>
+          </div>
+
+          <div class="court-layout">
+            <div class="court-column">
+              <div class="court-rail">
+                <div class="court-pill">Sentinel – anomaly scan</div>
+                <div class="court-pill">Guardian – policy check</div>
+                <div class="court-pill">Judge – final verdict</div>
+              </div>
+              <ul class="court-case-list" id="court-case-list">
+                <!-- Cases injected here -->
+              </ul>
+            </div>
+
+            <div class="court-column">
+              <div class="court-verdict-title">Latest verdict</div>
+              <div class="court-verdict-body" id="court-verdict-text">
+                No active case selected yet. Accept or decline a demo ticket with Quantum
+                Mode ON and the court will simulate a full review here.
+              </div>
+              <div class="court-actions">
+                <button
+                  class="court-simulate-btn"
+                  type="button"
+                  id="court-simulate"
+                >
+                  Re-run reasoning on latest case
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Toast -->
+      <div class="toast" id="toast" role="status" aria-live="polite">
+        <span class="toast-dot"></span>
+        <span id="toast-text">
+          Added to DAO waitlist. We’ll be in touch for pilot access.
+        </span>
+      </div>
+    </div>
+
+    <script>
+      const STORAGE_KEYS = {
+        quantum: "notfall_quantum_on",
+        walletPeriod: "notfall_wallet_period",
+        walletTab: "notfall_wallet_tab"
+      };
+
+      /* Info chips config */
+      const infoConfig = {
+        notfall: {
+          badge: "Platform view",
+          title: "Notfall Engineers as your neutral dispatch layer.",
+          body:
+            "For strong FM teams and landlords, Notfall becomes the single, regulated surface where tasks, engineers and spend are orchestrated. You keep approvals; the DAO guarantees workflow integrity and an immutable history of every visit."
+        },
+        realtime: {
+          badge: "Real-time ops",
+          title: "From ticket to engineer in seconds, not days.",
+          body:
+            "PLCs, BMS alerts and tenant issues resolve through the same pipe: triage, RAMS, dispatch, and payout. Engineers see live-ready jobs; operators see live status, ETAs and SLA risk before something slips."
+        },
+        dao: {
+          badge: "DAO & compliance",
+          title: "Governed like infrastructure, not just software.",
+          body:
+            "The Notfall DAO brings together operators, engineers and risk partners. Policies, SLAs and fee structures are voted on-chain, while ExecutionLog provides tamper-evident audit trails for ESG, insurers and regulators."
+        },
+        about: {
+          badge: "About us",
+          title: "A dispatch layer built for the cities we actually live in.",
+          body:
+            "Notfall started as a frustration with fragmented call-outs, opaque fees and zero memory between jobs. We’re building rails where good engineers earn more, owners see everything, and safety-critical work is never an afterthought."
+        }
+      };
+
+      const chipButtons = document.querySelectorAll(".eyebrow-toggle");
+      const infoBadge = document.getElementById("role-info-badge");
+      const infoTitle = document.getElementById("role-info-title");
+      const infoBody = document.getElementById("role-info-body");
+
+      function setInfoKey(key) {
+        const cfg = infoConfig[key];
+        if (!cfg) return;
+        infoBadge.textContent = cfg.badge;
+        infoTitle.textContent = cfg.title;
+        infoBody.textContent = cfg.body;
+
+        chipButtons.forEach((btn) => {
+          const active = btn.dataset.infoKey === key;
+          btn.classList.toggle("active", active);
+          btn.setAttribute("aria-selected", active ? "true" : "false");
+        });
+      }
+
+      chipButtons.forEach((btn) => {
+        btn.addEventListener("click", () => setInfoKey(btn.dataset.infoKey));
+        btn.addEventListener("keydown", (e) => {
+          if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+            e.preventDefault();
+            const arr = Array.from(chipButtons);
+            const idx = arr.indexOf(btn);
+            const nextIdx =
+              e.key === "ArrowRight"
+                ? (idx + 1) % arr.length
+                : (idx - 1 + arr.length) % arr.length;
+            arr[nextIdx].focus();
+          }
+        });
+      });
+
+      setInfoKey("notfall");
+
+      /* Feature pills */
+      const featureConfig = {
+        dispatch: {
+          badge: "Real-time dispatch",
+          title: "Live rail between alert, engineer and payout.",
+          body:
+            "Critical tickets from tenants, PLCs and BMS alerts flow into one queue. Notfall scores risk, surfaces ready-to-go jobs for certified engineers, and updates ETAs in real time so FM teams see issues before they become incidents."
+        },
+        escrow: {
+          badge: "Revolut-backed escrow",
+          title: "Funds held safely until the job is done.",
+          body:
+            "Payments route through a Revolut-backed escrow rail. Owners approve scope and price; funds are locked in NFTL or fiat and only released once work, RAMS and photos are signed off – with a clear audit trail for every call-out."
+        },
+        governance: {
+          badge: "DAO governance & RAMS",
+          title: "Safety, SLAs and RAMS enforced by the DAO.",
+          body:
+            "Engineers, operators and risk partners co-govern the rules. RAMS templates, SLA windows and pricing bands are voted on-chain, while ExecutionLog records who did what, when, and under which policy – ready for insurers and regulators."
+        }
+      };
+
+      const featurePills = document.querySelectorAll(".feature-pill");
+
+      function setFeatureKey(key) {
+        const cfg = featureConfig[key];
+        if (!cfg) return;
+        infoBadge.textContent = cfg.badge;
+        infoTitle.textContent = cfg.title;
+        infoBody.textContent = cfg.body;
+
+        featurePills.forEach((pill) => {
+          pill.classList.toggle("active", pill.dataset.featureKey === key);
+        });
+      }
+
+      featurePills.forEach((pill) => {
+        pill.addEventListener("click", () => setFeatureKey(pill.dataset.featureKey));
+        pill.addEventListener("keydown", (e) => {
+          if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+            e.preventDefault();
+            const arr = Array.from(featurePills);
+            const idx = arr.indexOf(pill);
+            const nextIdx =
+              e.key === "ArrowRight"
+                ? (idx + 1) % arr.length
+                : (idx - 1 + arr.length) % arr.length;
+            arr[nextIdx].focus();
+          }
+        });
+      });
+
+      /* Map */
+      let notfallMap = null;
+      let ticketMarker = null;
+
+      function initNotfallMap() {
+        if (notfallMap || typeof L === "undefined") return;
+        const mapEl = document.getElementById("notfall-map");
+        if (!mapEl) return;
+
+        notfallMap = L.map(mapEl, { zoomControl: false }).setView([51.509, -0.05], 13);
+
+        L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          maxZoom: 19,
+          attribution: "© OpenStreetMap contributors"
+        }).addTo(notfallMap);
+      }
+
+      function focusTaskOnMap(task) {
+        initNotfallMap();
+        if (!notfallMap || !task || !task.coords) return;
+        const [lat, lng] = task.coords;
+
+        if (!ticketMarker) {
+          ticketMarker = L.marker([lat, lng], {
+            icon: L.divIcon({ className: "live-ticket-marker", iconSize: [16, 16] })
+          }).addTo(notfallMap);
+        } else {
+          ticketMarker.setLatLng([lat, lng]);
+        }
+
+        ticketMarker.bindPopup(task.title);
+        notfallMap.setView([lat, lng], 14, { animate: true });
+      }
+
+      /* Task samples */
+      const taskSamples = [
+        {
+          title: "Emergency boiler leak · Devonshire Square, EC2",
+          meta: "ID T-101 · 35m ago · Status: NEW · Est. £300",
+          pills: ["Priority: High", "RAMS incomplete", "SLA not set"],
+          coords: [51.5175, -0.082],
+          value: 200
+        },
+        {
+          title: "HVAC fault · Chiller #3 · Canary Wharf E14",
+          meta: "ID T-238 · 12m ago · Status: TRIAGED · Est. £480",
+          pills: ["Priority: Medium", "RAMS ready", "SLA 4h"],
+          coords: [51.5054, -0.0235],
+          value: 480
+        },
+        {
+          title: "Lift fault · Tower B · Level 14",
+          meta: "ID T-301 · 5m ago · Status: DISPATCHED · Est. £320",
+          pills: ["Priority: High", "Engineer en route", "ETA 18 min"],
+          coords: [51.5045, -0.019],
+          value: 320
+        }
+      ];
+
+      const taskTitleEl = document.getElementById("task-demo-title");
+      const taskMetaEl = document.getElementById("task-demo-meta");
+      const pill1El = document.getElementById("task-pill-1");
+      const pill2El = document.getElementById("task-pill-2");
+      const pill3El = document.getElementById("task-pill-3");
+      const taskStatusEl = document.getElementById("task-demo-status");
+
+      let currentTaskIndex = 0;
+
+      function renderTask(index) {
+        const task = taskSamples[index];
+        if (!task) return;
+        taskTitleEl.textContent = task.title;
+        taskMetaEl.textContent = task.meta;
+        pill1El.textContent = task.pills[0] || "";
+        pill2El.textContent = task.pills[1] || "";
+        pill3El.textContent = task.pills[2] || "";
+        focusTaskOnMap(task);
+        taskStatusEl.textContent = "Waiting for DAO approval";
+      }
+
+      function rotateTask() {
+        currentTaskIndex = (currentTaskIndex + 1) % taskSamples.length;
+        const card = document.querySelector(".task-demo-main");
+        if (!card) {
+          renderTask(currentTaskIndex);
+          return;
+        }
+        card.style.transition = "opacity 0.25s ease";
+        card.style.opacity = "0";
+        setTimeout(() => {
+          renderTask(currentTaskIndex);
+          card.style.opacity = "1";
+        }, 220);
+      }
+
+      renderTask(currentTaskIndex);
+      setInterval(rotateTask, 7000);
+
+      /* Toast */
+      const toast = document.getElementById("toast");
+      const toastText = document.getElementById("toast-text");
+      let toastTimeoutId = null;
+
+      function showToast(message) {
+        if (!toast || !toastText) return;
+        toastText.textContent = message;
+        toast.classList.add("visible");
+        if (toastTimeoutId) clearTimeout(toastTimeoutId);
+        toastTimeoutId = setTimeout(() => {
+          toast.classList.remove("visible");
+        }, 4000);
+      }
+
+      /* Waitlist form submit (demo) */
+      const form = document.getElementById("waitlist-form");
+      
+      // Use local API in dev (served from the same Express app on :8080),
+// and production API when deployed to the real domain.
+      const API_URL = window.location.hostname === "localhost"
+  ? "/api/waitlist"
+  : "https://api.notfallengineers.com/api/waitlist";
+
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const data = new FormData(form);
+        const payload = {
+          fullName: data.get("fullName") || "",
+          workEmail: data.get("workEmail") || "",
+          persona: data.get("persona") || "",
+          region: data.get("region") || "",
+          interests: data.get("interests") || "",
+          tenOutOfTen: data.get("tenOutOfTen") || "",
+          referrer: data.get("referrer") || ""
+        };
+
+        try {
+          const res = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+
+          if (!res.ok) {
+            showToast("Something went wrong. Please try again shortly.");
+            return;
+          }
+
+          showToast("Added to DAO waitlist. We’ll be in touch for pilot access.");
+          form.reset();
+        } catch (err) {
+          showToast("Network error. Please try again.");
+        }
+      });
+
+      /* Interests pills */
+      const interestPills = document.querySelectorAll(".wl-interest-pill");
+      const interestHidden = document.getElementById("wl-interest-hidden");
+
+      interestPills.forEach((pill) => {
+        pill.addEventListener("click", () => {
+          pill.classList.toggle("active");
+          const selected = Array.from(interestPills)
+            .filter((p) => p.classList.contains("active"))
+            .map((p) => p.dataset.value);
+          interestHidden.value = selected.join(",");
+        });
+      });
+
+      /* Wallet state */
+      const walletTotals = { day: 0, week: 0, month: 0, year: 0 };
+
+      const walletSummaryEls = {
+        day: document.getElementById("wallet-total-day"),
+        week: document.getElementById("wallet-total-week"),
+        month: document.getElementById("wallet-total-month"),
+        year: document.getElementById("wallet-total-year")
+      };
+
+      const walletSummaryNftlEls = {
+        day: document.getElementById("wallet-total-day-nftl"),
+        week: document.getElementById("wallet-total-week-nftl"),
+        month: document.getElementById("wallet-total-month-nftl"),
+        year: document.getElementById("wallet-total-year-nftl")
+      };
+
+      const walletBarFill = {
+        day: document.getElementById("wallet-bar-fill-day"),
+        week: document.getElementById("wallet-bar-fill-week"),
+        month: document.getElementById("wallet-bar-fill-month"),
+        year: document.getElementById("wallet-bar-fill-year")
+      };
+
+      const walletBarLabel = {
+        day: document.getElementById("wallet-bar-label-day"),
+        week: document.getElementById("wallet-bar-label-week"),
+        month: document.getElementById("wallet-bar-label-month"),
+        year: document.getElementById("wallet-bar-label-year")
+      };
+
+      const walletChartCaption = document.getElementById("wallet-chart-caption");
+      const walletJobList = document.getElementById("wallet-job-list");
+      const walletCardTitle = document.getElementById("wallet-card-title");
+      const walletCardTask = document.getElementById("wallet-card-task");
+      const walletCardValid = document.getElementById("wallet-card-valid");
+      const walletCardBuffer = document.getElementById("wallet-card-buffer");
+
+      function fmtGBP(v) {
+        return "£" + v.toLocaleString("en-GB", { maximumFractionDigits: 0 });
+      }
+
+      function fmtNFTL(v) {
+        return v.toLocaleString("en-GB", { maximumFractionDigits: 0 }) + " NFTL";
+      }
+
+      function syncWalletVisuals() {
+        const max = Math.max(
+          walletTotals.day,
+          walletTotals.week,
+          walletTotals.month,
+          walletTotals.year,
+          1
+        );
+
+        ["day", "week", "month", "year"].forEach((k) => {
+          const amount = walletTotals[k];
+          walletSummaryEls[k].textContent = fmtGBP(amount);
+          walletSummaryNftlEls[k].textContent = fmtNFTL(amount * 0.4);
+
+          const pct = (amount / max) * 100;
+          if (walletBarFill[k]) walletBarFill[k].style.height = pct + "%";
+          if (walletBarLabel[k]) walletBarLabel[k].textContent = fmtGBP(amount);
+        });
+
+        walletChartCaption.textContent =
+          fmtGBP(walletTotals.day) + " · NFTL mirrored 1:1 in DAO view (demo)";
+      }
+
+      function addJobToWallet(task) {
+        const amount = task.value || 200;
+        walletTotals.day += amount;
+        walletTotals.week += amount;
+        walletTotals.month += amount;
+        walletTotals.year += amount;
+
+        const li = document.createElement("li");
+        li.className = "wallet-job-item";
+        li.innerHTML = `
+          <div class="wallet-job-main">
+            <div>${task.title}</div>
+            <div class="wallet-job-meta">${task.meta}</div>
+          </div>
+          <div class="wallet-job-amount">${fmtGBP(amount)}</div>
+        `;
+        walletJobList.prepend(li);
+
+        const todayStr = new Date().toLocaleDateString("en-GB", {
+          month: "2-digit",
+          year: "2-digit"
+        });
+
+        walletCardTitle.textContent = "T-Job · Emergency buffer";
+        walletCardTask.textContent = task.title;
+        walletCardValid.textContent = todayStr;
+        walletCardBuffer.textContent = fmtGBP(amount) + " GBP";
+
+        syncWalletVisuals();
+      }
+
+      /* Appbar + overlays */
+      const navQuantum = document.getElementById("nav-quantum");
+      const navWallet = document.getElementById("nav-wallet");
+      const navPrivate = document.getElementById("nav-private");
+
+      const walletOverlay = document.getElementById("wallet-overlay");
+      const courtOverlay = document.getElementById("court-overlay");
+      let activeOverlay = null;
+
+      function flashPill(el) {
+        if (!el) return;
+        el.classList.remove("nav-pill-flash");
+        void el.offsetWidth;
+        el.classList.add("nav-pill-flash");
+        setTimeout(() => el.classList.remove("nav-pill-flash"), 260);
+      }
+
+      function getFocusable(container) {
+        return container.querySelectorAll(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+      }
+
+      function openOverlay(overlay) {
+        if (!overlay) return;
+        activeOverlay = overlay;
+        overlay.classList.add("visible");
+        overlay.setAttribute("aria-hidden", "false");
+        const focusables = getFocusable(overlay);
+        overlay._focusables = focusables;
+        if (focusables.length) focusables[0].focus();
+      }
+
+      function closeOverlay(overlay) {
+        if (!overlay) return;
+        overlay.classList.remove("visible");
+        overlay.setAttribute("aria-hidden", "true");
+        activeOverlay = null;
+      }
+
+      window.addEventListener("keydown", (e) => {
+        if (!activeOverlay) return;
+
+        if (e.key === "Escape") {
+          e.preventDefault();
+          if (activeOverlay === walletOverlay) closeOverlay(walletOverlay);
+          if (activeOverlay === courtOverlay) closeOverlay(courtOverlay);
+          return;
+        }
+
+        if (e.key !== "Tab") return;
+        const focusables =
+          activeOverlay._focusables || getFocusable(activeOverlay);
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      });
+
+      document.querySelectorAll("[data-overlay-close]").forEach((el) => {
+        el.addEventListener("click", () => {
+          const key = el.getAttribute("data-overlay-close");
+          if (key === "wallet") closeOverlay(walletOverlay);
+          if (key === "court") closeOverlay(courtOverlay);
+        });
+      });
+
+      /* Quantum mode toggle */
+      let quantumModeOn = false;
+
+      function setQuantumMode(on, opts = {}) {
+        const fromUser = !!opts.fromUser;
+        quantumModeOn = !!on;
+        document.body.classList.toggle("quantum-on", quantumModeOn);
+        navQuantum.classList.toggle("nav-pill-on", quantumModeOn);
+        navQuantum.setAttribute("aria-pressed", quantumModeOn ? "true" : "false");
+
+        const textSpan = navQuantum.querySelector("span:nth-of-type(2)");
+        if (textSpan) {
+          textSpan.innerHTML = quantumModeOn
+            ? "<strong>AI QUANTUM POLICE</strong>&nbsp;·&nbsp;ON"
+            : "<strong>AI QUANTUM POLICE</strong>&nbsp;·&nbsp;OFF";
+        }
+
+        try {
+          localStorage.setItem(
+            STORAGE_KEYS.quantum,
+            quantumModeOn ? "1" : "0"
+          );
+        } catch (e) {}
+
+        if (fromUser) {
+          flashPill(navQuantum);
+          showToast(
+            quantumModeOn
+              ? "Quantum mode ON · AI court will review demo cases."
+              : "Quantum mode OFF · Manual dispatch only."
+          );
+        }
+      }
+
+      navQuantum.addEventListener("click", () => {
+        setQuantumMode(!quantumModeOn, { fromUser: true });
+        openOverlay(courtOverlay);
+      });
+
+      navWallet.addEventListener("click", () => {
+        flashPill(navWallet);
+        openOverlay(walletOverlay);
+        showToast(
+          "Opening Earnings & NFTL · Demo payouts mirrored against the DAO ledger."
+        );
+      });
+
+      navPrivate.addEventListener("click", () => {
+        flashPill(navPrivate);
+        showToast("Private demo beta · No live client funds.");
+      });
+
+      /* Persist quantum & wallet state */
+      (function restorePersistentState() {
+        try {
+          const q = localStorage.getItem(STORAGE_KEYS.quantum);
+          if (q === "1") setQuantumMode(true);
+        } catch (e) {}
+      })();
+
+      const walletTabOverview = document.getElementById("wallet-tab-overview");
+      const walletTabJobs = document.getElementById("wallet-tab-jobs");
+      const walletRangeTabs = document.querySelectorAll(".wallet-range-tab");
+
+      function setWalletTab(tabKey, fromUser = false) {
+        const overviewActive = tabKey === "overview";
+        walletTabOverview.classList.toggle("active", overviewActive);
+        walletTabJobs.classList.toggle("active", !overviewActive);
+        if (fromUser) {
+          try {
+            localStorage.setItem(STORAGE_KEYS.walletTab, tabKey);
+          } catch (e) {}
+        }
+      }
+
+      function setWalletPeriod(period, fromUser = false) {
+        walletRangeTabs.forEach((btn) =>
+          btn.classList.toggle("active", btn.dataset.period === period)
+        );
+        if (fromUser) {
+          try {
+            localStorage.setItem(STORAGE_KEYS.walletPeriod, period);
+          } catch (e) {}
+        }
+      }
+
+      walletTabOverview.addEventListener("click", () => setWalletTab("overview", true));
+      walletTabJobs.addEventListener("click", () => setWalletTab("jobs", true));
+
+      walletRangeTabs.forEach((btn) => {
+        btn.addEventListener("click", () => setWalletPeriod(btn.dataset.period, true));
+      });
+
+      (function restoreWalletState() {
+        try {
+          const tab = localStorage.getItem(STORAGE_KEYS.walletTab);
+          setWalletTab(tab === "jobs" ? "jobs" : "overview");
+          const period = localStorage.getItem(STORAGE_KEYS.walletPeriod);
+          setWalletPeriod(
+            ["day", "week", "month", "year"].includes(period) ? period : "day"
+          );
+        } catch (e) {
+          setWalletTab("overview");
+          setWalletPeriod("day");
+        }
+      })();
+
+      /* Quantum court */
+      const courtCaseList = document.getElementById("court-case-list");
+      const courtVerdictText = document.getElementById("court-verdict-text");
+      const courtSimulateBtn = document.getElementById("court-simulate");
+      let lastQuantumCase = null;
+
+      function describeQuantumVerdict(action, task) {
+        if (action === "accept") {
+          return (
+            "Verdict: APPROVE · Anomaly scan clean, RAMS sufficient and SLA window respected. " +
+            "Funds may move on completion; mirrored in ExecutionLog and the DAO ledger."
+          );
+        }
+        return (
+          "Verdict: DECLINE / RE-ROUTE · Sentinel flagged potential anomaly. " +
+          "Guardian recommends dispatching the next certified engineer and holding funds in escrow."
+        );
+      }
+
+      function logQuantumCase(action, task) {
+        if (!quantumModeOn) return;
+        lastQuantumCase = { action, task };
+
+        const row = document.createElement("button");
+        row.type = "button";
+        row.className = "court-case-row";
+        row.innerHTML = `
+          <div><span class="case-tag">${action === "accept" ? "APPROVE" : "DECLINE"}</span> · ${
+          task.title
+        }</div>
+          <div style="color:#9ca3af;margin-top:2px;">${task.meta}</div>
+        `;
+        row.addEventListener("click", () => {
+          courtVerdictText.textContent = describeQuantumVerdict(action, task);
+        });
+        courtCaseList.prepend(row);
+        courtVerdictText.textContent = describeQuantumVerdict(action, task);
+        flashPill(navQuantum);
+      }
+
+      courtSimulateBtn.addEventListener("click", () => {
+        if (!lastQuantumCase) {
+          showToast(
+            "No case yet · Accept or decline a demo ticket with Quantum Mode ON."
+          );
+          return;
+        }
+        courtVerdictText.textContent = describeQuantumVerdict(
+          lastQuantumCase.action,
+          lastQuantumCase.task
+        );
+        showToast("Re-running reasoning on latest case (demo).");
+      });
+
+      /* Accept / Decline / GO */
+      const btnAccept = document.getElementById("btn-accept");
+      const btnDecline = document.getElementById("btn-decline");
+      const btnGo = document.getElementById("btn-go");
+
+      function showGoButton() {
+        if (!btnGo) return;
+        btnGo.hidden = false;
+        btnGo.classList.add("visible", "active");
+      }
+
+      function hideGoButton() {
+        if (!btnGo) return;
+        btnGo.classList.remove("visible", "active");
+        btnGo.hidden = true;
+      }
+
+      if (btnAccept) {
+        btnAccept.addEventListener("click", () => {
+          const task = taskSamples[currentTaskIndex];
+          taskStatusEl.textContent =
+            "Accepted by demo engineer · Dispatching...";
+          showToast("Simulated: engineer accepted the live ticket.");
+          addJobToWallet(task);
+          showGoButton();
+          if (quantumModeOn) {
+            logQuantumCase("accept", task);
+            openOverlay(courtOverlay);
+          }
+        });
+      }
+
+      if (btnDecline) {
+        btnDecline.addEventListener("click", () => {
+          const task = taskSamples[currentTaskIndex];
+          taskStatusEl.textContent =
+            "Re-routing to next certified engineer...";
+          showToast("Simulated: ticket declined · re-routing in DAO.");
+          hideGoButton();
+          if (quantumModeOn) {
+            logQuantumCase("decline", task);
+            openOverlay(courtOverlay);
+          }
+        });
+      }
+
+      if (btnGo) {
+        btnGo.addEventListener("click", () => {
+          const task = taskSamples[currentTaskIndex];
+          focusTaskOnMap(task);
+          showToast("Navigating to task location (demo).");
+        });
+      }
+
+      /* Waitlist reveal logic */
+      const heroJoinBtn = document.getElementById("hero-join-btn");
+      const waitlistCard = document.getElementById("waitlist-card");
+      const wlNameInput = document.getElementById("wl-name");
+
+      function openWaitlistForm() {
+        if (!waitlistCard) return;
+        waitlistCard.classList.add("waitlist-open");
+        setTimeout(() => {
+          wlNameInput && wlNameInput.focus();
+        }, 260);
+      }
+
+      if (heroJoinBtn) {
+        heroJoinBtn.addEventListener("click", () => {
+          openWaitlistForm();
+        });
+      }
+
+      window.addEventListener("load", () => {
+        initNotfallMap();
+        renderTask(currentTaskIndex);
+      });
+    </script>
+  </body>
+</html>

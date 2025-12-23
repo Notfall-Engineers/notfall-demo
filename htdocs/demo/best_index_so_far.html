@@ -1,0 +1,2960 @@
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Notfall Engineers – Multi-Role Demo (Engineer / Client-FM / DAO)</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <!-- React stack -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Tailwind for layout helpers -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- 🔗 Global FakeAPI (htdocs/demo/FakeAPI.js) -->
+    <script src="./FakeAPI.js"></script>
+
+    <style>
+      :root {
+        --nf-primary: #3a7bff;
+        --nf-primary-alt: #7a3fff;
+        --nf-accent: #00e1b4;
+        --nf-danger: #ff3b30;
+
+        /* Revolut-like metallic dark blue */
+        --nf-dark-bg: radial-gradient(circle at top left, #172554 0, #020617 55%, #020617 100%);
+        --nf-dark-shell: radial-gradient(circle at 8% -20%, #1d4ed8 0, #020617 55%);
+        --nf-dark-panel: radial-gradient(circle at -10% -40%, #1d4ed8 0, #020617 60%);
+        --nf-dark-widget: radial-gradient(circle at -20% -40%, #1d4ed8 0, #020617 70%);
+
+        --nf-text-dark: #e5edf8;
+        --nf-text-muted-dark: #9ca3af;
+      }
+
+      html, body, #root { height: 100%; }
+
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Arial, sans-serif;
+        -webkit-font-smoothing: antialiased;
+        background: var(--nf-dark-bg);
+        color: var(--nf-text-dark);
+      }
+
+      /* Layout shells */
+      .nf-root { min-height: 100vh; display: flex; flex-direction: column; }
+      .nf-shell-bg {
+        max-width: 80rem;
+        margin: 1.8rem auto 2.4rem;
+        border-radius: 30px;
+        padding: 1.5rem 1.25rem 1.75rem;
+        background: var(--nf-dark-shell);
+        box-shadow: 0 26px 70px rgba(15, 23, 42, 0.9), 0 0 0 1px rgba(15, 23, 42, 0.85);
+      }
+
+      .nf-panel-main {
+        border-radius: 26px;
+        padding: 1.5rem 1.75rem 1.6rem;
+        background: var(--nf-dark-panel);
+        box-shadow: 0 22px 60px rgba(15, 23, 42, 0.85), 0 0 0 1px rgba(15, 23, 42, 0.85);
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(37, 99, 235, 0.7);
+      }
+
+      .nf-panel-widget {
+        border-radius: 26px;
+        padding: 1.25rem 1.3rem;
+        background: var(--nf-dark-widget);
+        box-shadow: 0 18px 60px rgba(15, 23, 42, 0.9), 0 0 0 1px rgba(15, 23, 42, 0.9);
+      }
+
+      .nf-divider {
+        height: 1px;
+        width: 100%;
+        background: linear-gradient(90deg, rgba(148,163,184,0), rgba(148,163,184,0.55), rgba(148,163,184,0));
+        margin: 0.5rem 0;
+      }
+
+      /* App bar */
+      .nf-appbar {
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        background: radial-gradient(circle at 0% -80%, #1d4ed8 0, #020617 55%);
+        box-shadow: 0 22px 60px rgba(0,0,0,0.85), 0 0 0 1px rgba(15,23,42,0.9);
+        border-bottom: 1px solid rgba(30,64,175,0.8);
+        backdrop-filter: blur(18px);
+      }
+      .nf-appbar-inner {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 18px 32px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .nf-brand { display: flex; align-items: center; gap: 12px; }
+      .nf-brand-logo {
+        height: 36px;
+        width: 128px;
+        border-radius: 12px;
+        background: radial-gradient(circle at 30% 20%, #38bdf8, #1d4ed8 60%, #22c55e 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        box-shadow: 0 16px 40px rgba(15, 23, 42, 0.85);
+      }
+      .nf-brand-title { font-weight: 800; font-size: 18px; letter-spacing: 0.03em; }
+      .nf-brand-sub { font-size: 11px; opacity: 0.8; }
+
+      .nf-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        border-radius: 999px;
+        padding: 4px 11px;
+        font-size: 11px;
+        background: radial-gradient(circle at 0 0, #16a34a 0, #052e16 50%, #020617 100%);
+        color: #bbf7d0;
+        box-shadow: 0 10px 30px rgba(22, 163, 74, 0.75), 0 0 0 1px rgba(34, 197, 94, 0.5);
+      }
+      .nf-chip-dot { width: 7px; height: 7px; border-radius: 999px; background: #22c55e; box-shadow: 0 0 14px rgba(34, 197, 94, 0.9); }
+
+      .nf-appbar-actions { display: flex; align-items: center; gap: 10px; }
+      .nf-appbar-btn {
+        border-radius: 999px;
+        padding: 6px 14px;
+        border: 1px solid rgba(148, 163, 184, 0.7);
+        background: radial-gradient(circle at 0 0, rgba(15,23,42,0.95), rgba(15,23,42,0.98));
+        color: #e5e7eb;
+        font-size: 11px;
+        font-weight: 500;
+        cursor: pointer;
+        box-shadow: 0 10px 26px rgba(15, 23, 42, 0.95);
+        transition: transform 0.1s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+      }
+      .nf-appbar-btn:hover { transform: translateY(-1px); border-color: #38bdf8; }
+
+      /* Inputs + buttons */
+      .nf-input {
+        width: 100%;
+        border-radius: 999px;
+        border: 1px solid rgba(148, 163, 184, 0.55);
+        padding: 0.6rem 1rem;
+        background: radial-gradient(circle at top left, rgba(15,23,42,0.9), rgba(15,23,42,0.98));
+        box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06), 0 12px 30px rgba(15,23,42,0.9);
+        font-size: 0.9rem;
+        color: #e5edf8;
+      }
+      .nf-input:focus {
+        outline: none;
+        border-color: #38bdf8;
+        box-shadow: 0 0 0 1px rgba(56,189,248,0.8), 0 0 0 7px rgba(56,189,248,0.25);
+      }
+      textarea.nf-input { border-radius: 20px; min-height: 90px; resize: vertical; }
+
+      .nf-btn-primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.45rem;
+        border-radius: 999px;
+        padding: 0.55rem 1.2rem;
+        border: none;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: 600;
+        background-image: linear-gradient(135deg, #2563eb, #4f46e5);
+        color: white;
+        box-shadow: 0 16px 40px rgba(37,99,235,0.9), 0 0 0 1px rgba(191,219,254,0.6);
+        transition: transform 0.1s ease, box-shadow 0.16s ease, filter 0.16s ease;
+      }
+      .nf-btn-primary:hover { transform: translateY(-1px); filter: brightness(1.05); }
+      .nf-btn-primary:active { transform: translateY(0px); filter: brightness(0.98); }
+      .nf-btn-primary:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
+
+      .nf-btn-ghost {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        border-radius: 999px;
+        padding: 0.5rem 1rem;
+        border: 1px solid rgba(148, 163, 184, 0.7);
+        background: radial-gradient(circle at top, rgba(15,23,42,0.95), rgba(15,23,42,0.98));
+        cursor: pointer;
+        font-size: 0.86rem;
+        font-weight: 500;
+        color: #e5e7eb;
+        box-shadow: 0 8px 22px rgba(15,23,42,0.95);
+        transition: transform 0.1s ease, border-color 0.16s ease, filter 0.16s ease;
+      }
+      .nf-btn-ghost:hover { transform: translateY(-1px); border-color: #38bdf8; }
+      .nf-btn-ghost:active { transform: translateY(0px); filter: brightness(0.98); }
+      .nf-btn-ghost:disabled { opacity: 0.45; cursor: default; box-shadow: none; }
+
+      /* Pills / badges */
+      .nf-pill {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        padding: 0.18rem 0.65rem;
+        font-size: 0.72rem;
+        font-weight: 500;
+        gap: 0.35rem;
+        background: linear-gradient(145deg, #0f172a, #020617);
+        color: #e5e7eb;
+        border: 1px solid rgba(148, 163, 184, 0.7);
+        box-shadow: 0 6px 14px rgba(15,23,42,0.8);
+        white-space: nowrap;
+      }
+      .nf-pill-beta {
+        color: #ff3b30;
+        border-color: rgba(248,113,113,0.9);
+        box-shadow: 0 0 18px rgba(248,113,113,0.7);
+      }
+
+      .nf-dot {
+        width: 7px;
+        height: 7px;
+        border-radius: 999px;
+        background: #22c55e;
+        box-shadow: 0 0 12px rgba(34,197,94,0.9);
+        animation: nf-dot-pulse 1.6s ease-out infinite;
+      }
+      @keyframes nf-dot-pulse {
+        0% { transform: scale(0.9); opacity: 0.7; }
+        50% { transform: scale(1.1); opacity: 1; }
+        100% { transform: scale(0.95); opacity: 0.75; }
+      }
+
+      .nf-status-badge { border-radius: 999px; padding: 3px 9px; font-size: 11px; font-weight: 600; }
+      .nf-status-not-submitted { background: rgba(15,23,42,0.7); color: #9ca3af; }
+      .nf-status-pending { background: rgba(251,191,36,0.13); color: #fbbf24; }
+      .nf-status-approved { background: rgba(16,185,129,0.17); color: #6ee7b7; }
+      .nf-status-rejected { background: rgba(248,113,113,0.18); color: #fecaca; }
+
+      /* Skeleton */
+      .nf-skeleton {
+        animation: nf-skel 1.4s ease-in-out infinite;
+        background: linear-gradient(90deg, rgba(148,163,184,0.3), rgba(148,163,184,0.55), rgba(148,163,184,0.3));
+        background-size: 200% 100%;
+        border-radius: 16px;
+      }
+      @keyframes nf-skel { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+      /* Live chip */
+      .nf-live-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        border-radius: 999px;
+        padding: 0.24rem 0.7rem;
+        font-size: 0.75rem;
+        background: rgba(15,23,42,0.9);
+        border: 1px solid rgba(148,163,184,0.7);
+      }
+
+      /* Task cards */
+      .nf-task-card {
+        border-radius: 18px;
+        padding: 0.85rem 0.9rem;
+        margin-bottom: 0.7rem;
+        border: 1px solid rgba(80, 120, 255, 0.7);
+        background: radial-gradient(circle at 20% 0%, #1b2a68 0%, #0d1a45 35%, #08122f 70%, #050a1f 100%);
+        box-shadow: 0 18px 60px rgba(5,10,40,0.9), 0 0 0 1px rgba(10,20,60,0.95);
+        transition: transform 0.12s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+      }
+      .nf-task-card:hover { transform: translateY(-1px); border-color: rgba(191,219,254,0.95); }
+
+      /* Modal base */
+      .nf-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(circle at top, rgba(15,23,42,0.92), rgba(2,6,23,0.96));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 70;
+        padding: 18px;
+      }
+      .nf-modal {
+        width: 720px;
+        max-width: calc(100% - 24px);
+        border-radius: 26px;
+        background: radial-gradient(circle at -10% -40%, #1d4ed8, #020617 70%);
+        box-shadow: 0 34px 110px rgba(0,0,0,0.96), 0 0 0 1px rgba(148,163,184,0.7);
+        padding: 18px 18px 16px;
+      }
+      .nf-modal-title { font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+      .nf-modal-sub { font-size: 11px; color: rgba(226,232,240,0.75); margin-top: 6px; }
+      .nf-modal-footer { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
+
+      @media (max-width: 960px) {
+        .nf-appbar-inner { padding: 16px 16px; }
+        .nf-panel-main { padding: 1.2rem 1.1rem; }
+      }
+    </style>
+  </head>
+
+  <body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+      const { useState, useEffect, useMemo, useRef } = React;
+
+      // -------------------------------------------------------------------
+      // Global API (FakeAPI.js)
+      // -------------------------------------------------------------------
+      const api = window.FakeAPI || {};
+
+      // Ensure widgets can access a shared socket (FakeAPI manages subscription + identity).
+      function ensureSocket() {
+        try { return api.getWidgetSocket ? api.getWidgetSocket() : null; } catch { return null; }
+      }
+      // ------------------------ LIVE SWITCH ------------------------
+const LIVE_MODE = false; // set true when backend is connected
+const API_BASE = "http://localhost:8080";
+const WS_URL = "ws://localhost:8080/ws/widgets";
+const ROLE = "ENGINEER";
+const ENGINEER_ID = "eng_demo";
+
+// demo-safe ids for analytics
+function getOrCreate(key, make) {
+  const v = localStorage.getItem(key);
+  if (v) return v;
+  const nv = make();
+  localStorage.setItem(key, nv);
+  return nv;
+}
+const USER_PSEUDO_ID = getOrCreate("nf_user_pseudo_id", () => crypto.randomUUID());
+const SESSION_ID = getOrCreate("nf_session_id", () => crypto.randomUUID());
+
+// ------------------------ Analytics ------------------------
+async function track(event) {
+  const enriched = {
+    event_id: crypto.randomUUID(),
+    event_ts: new Date().toISOString(),
+    event_date: new Date().toISOString().slice(0, 10),
+
+    session_id: SESSION_ID,
+    user_pseudo_id: USER_PSEUDO_ID,
+    role: ROLE,
+    engineer_id: ENGINEER_ID,
+
+    page: "engineer_dashboard",
+    ...event,
+    meta: event.meta || {}
+  };
+
+  // Prefer WS in live mode; fallback REST always allowed
+  if (LIVE_MODE && window.__nfWsSend) {
+    try {
+      window.__nfWsSend({ topic: "analytics", ...enriched });
+      return;
+    } catch {}
+  }
+
+  // REST fallback
+  try {
+    await fetch(`${API_BASE}/api/analytics/event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(enriched)
+    });
+  } catch {}
+}
+
+// ------------------------ WS Hook ------------------------
+function useWidgetWS({ role, engineerId, topics }) {
+  const [connected, setConnected] = React.useState(false);
+  const [lastMsg, setLastMsg] = React.useState(null);
+
+  React.useEffect(() => {
+    if (!LIVE_MODE) return;
+
+    let ws;
+    let alive = true;
+    let reconnectTimer = null;
+
+    const url = `${WS_URL}?role=${encodeURIComponent(role)}&engineerId=${encodeURIComponent(engineerId || "")}`;
+
+    function connect() {
+      ws = new WebSocket(url);
+
+      ws.onopen = () => {
+        if (!alive) return;
+        setConnected(true);
+
+        // expose sender for analytics helper
+        window.__nfWsSend = (obj) => ws.send(JSON.stringify(obj));
+
+        ws.send(JSON.stringify({ type: "subscribe", topics: topics || ["system", "task", "ticket", "analytics"] }));
+        ws.send(JSON.stringify({ type: "hello", role, engineerId }));
+        track({ widget_id: "system", event_name: "ws_open" });
+      };
+
+      ws.onmessage = (ev) => {
+        if (!alive) return;
+        try {
+          const msg = JSON.parse(ev.data);
+          setLastMsg(msg);
+
+          if (msg?.topic === "system" && msg?.action === "ping") {
+            // keep silent; appbar "online" can be driven by connected flag
+            return;
+          }
+
+          // Optional: track inbound ws messages
+          track({
+            widget_id: "ws",
+            event_name: "ws_message",
+            event_label: `${msg.topic}.${msg.action || "event"}`,
+            meta: { topic: msg.topic, action: msg.action || null }
+          });
+        } catch {}
+      };
+
+      ws.onclose = () => {
+        setConnected(false);
+        if (!alive) return;
+        reconnectTimer = setTimeout(connect, 1200);
+      };
+
+      ws.onerror = () => {
+        try { ws.close(); } catch {}
+      };
+    }
+
+    connect();
+
+    return () => {
+      alive = false;
+      window.__nfWsSend = null;
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      try { ws && ws.close(); } catch {}
+    };
+  }, [role, engineerId, JSON.stringify(topics || [])]);
+
+  return { connected, lastMsg };
+}
+
+
+      // -------------------------------------------------------------------
+      // Helpers
+      // -------------------------------------------------------------------
+      function Skeleton({ className = "" }) {
+        return <div className={"nf-skeleton " + className} />;
+      }
+
+      function StatusBadge({ status }) {
+        const s = (status || "").toUpperCase();
+        let cls = "nf-status-badge ";
+        if (s === "NEW" || s === "OPEN" || s === "REQUESTED" || s === "PENDING") cls += "nf-status-pending";
+        else if (s === "ACCEPTED" || s === "ENROUTE" || s === "ONSITE" || s === "APPROVED" || s === "COMPLETED" || s === "PAID")
+          cls += "nf-status-approved";
+        else if (s === "REJECTED" || s === "FAILED" || s === "DECLINED") cls += "nf-status-rejected";
+        else cls += "nf-status-not-submitted";
+        return <span className={cls}>{status || "Unknown"}</span>;
+      }
+
+      function timeAgo(iso) {
+        if (!iso) return "just now";
+        const d = new Date(iso);
+        const diffMs = Date.now() - d.getTime();
+        const sec = Math.max(1, Math.floor(diffMs / 1000));
+        const min = Math.floor(sec / 60);
+        const hr = Math.floor(min / 60);
+        const day = Math.floor(hr / 24);
+        if (day > 1) return `${day} days ago`;
+        if (day === 1) return "1 day ago";
+        if (hr > 1) return `${hr} hours ago`;
+        if (hr === 1) return "1 hour ago";
+        if (min > 1) return `${min} mins ago`;
+        if (min === 1) return "1 min ago";
+        return "just now";
+      }
+
+      function safeJson(x) {
+        try { return JSON.stringify(x, null, 2); } catch { return String(x); }
+      }
+
+      // -------------------------------------------------------------------
+      // Sound/Vibration (Engineer Inbox alerts)
+      // -------------------------------------------------------------------
+      function playOfferSound() {
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          if (!AudioCtx) return;
+          const ctx = new AudioCtx();
+          const o = ctx.createOscillator();
+          const g = ctx.createGain();
+
+          o.type = "sine";
+          o.frequency.value = 880;
+          g.gain.value = 0.0001;
+
+          o.connect(g);
+          g.connect(ctx.destination);
+
+          const t = ctx.currentTime;
+          g.gain.setValueAtTime(0.0001, t);
+          g.gain.exponentialRampToValueAtTime(0.12, t + 0.02);
+          g.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+
+          o.start(t);
+          o.stop(t + 0.22);
+
+          setTimeout(() => ctx.close().catch(() => {}), 500);
+        } catch {}
+      }
+
+      function vibrate(pattern = [60, 40, 60]) {
+        try { if (navigator.vibrate) navigator.vibrate(pattern); } catch {}
+      }
+
+      // -------------------------------------------------------------------
+      // Shared WS hook – uses FakeAPI socket (single source of truth)
+      // -------------------------------------------------------------------
+      function useFakeApiSocket({ onEvent }) {
+        const onEventRef = useRef(onEvent);
+        onEventRef.current = onEvent;
+
+        useEffect(() => {
+          const ws = ensureSocket();
+          if (!ws) return;
+
+          const handler = (evt) => {
+            try {
+              const msg = JSON.parse(evt.data);
+              if (!msg) return;
+              onEventRef.current && onEventRef.current(msg);
+            } catch {}
+          };
+
+          ws.addEventListener("message", handler);
+          return () => {
+            try { ws.removeEventListener("message", handler); } catch {}
+          };
+        }, []);
+      }
+      // -------------------------------------------------------------------
+      // Demographics modal (non-identifying)
+      // -------------------------------------------------------------------
+      function DemographicsModal({ open, onClose }) {
+        const [draft, setDraft] = useState({
+          roleType: "Engineer",
+          orgType: "Independent",
+          region: "London",
+          experienceBand: "5-10 years",
+          tradeBand: "HVAC",
+          languagePref: "English (UK)",
+          deviceContext: "Desktop",
+        });
+
+        useEffect(() => {
+          if (!open) return;
+          Promise.resolve(api.getDemographics ? api.getDemographics() : null).then((p) => {
+            if (p) setDraft((d) => ({ ...d, ...p }));
+          });
+        }, [open]);
+
+        if (!open) return null;
+
+        function save() {
+          if (api.setDemographics) api.setDemographics(draft);
+          if (api.track) api.track("demographics_saved", { draft });
+          onClose && onClose();
+        }
+
+        return (
+          <div className="nf-modal-overlay">
+            <div className="nf-modal">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="nf-modal-title">Demo profile (demographics)</div>
+                  <div className="nf-modal-sub">
+                    Used for aggregated demo analytics only (no personal identifiers).
+                  </div>
+                </div>
+                <button className="nf-appbar-btn" onClick={onClose}>Close</button>
+              </div>
+
+              <div className="nf-divider"></div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {[
+                  ["Role type", "roleType", ["Engineer","Client/FM","DAO","Investor/Observer"]],
+                  ["Organisation type", "orgType", ["Independent","SME","Enterprise FM","Landlord / Domestic","Industrial/OEM"]],
+                  ["Region", "region", ["London","South East","Midlands","North","Scotland","Wales","Northern Ireland","International"]],
+                  ["Experience band", "experienceBand", ["0-2 years","2-5 years","5-10 years","10-15 years","15+ years"]],
+                  ["Trade band", "tradeBand", ["HVAC","Electrical","Fire & Safety","Lift","Plumbing","BMS","Industrial / PLC"]],
+                  ["Language preference", "languagePref", ["English (UK)","English (US)","French","Romanian","German","Other"]],
+                  ["Device context", "deviceContext", ["Desktop","Mobile","Tablet"]],
+                ].map(([label, key, opts]) => (
+                  <div key={key}>
+                    <div className="text-[11px] text-slate-300 mb-1">{label}</div>
+                    <select
+                      className="nf-input text-[12px]"
+                      value={draft[key]}
+                      onChange={(e) => setDraft((p) => ({ ...p, [key]: e.target.value }))}
+                    >
+                      {opts.map((o) => <option key={o}>{o}</option>)}
+                    </select>
+                  </div>
+                ))}
+              </div>
+
+              <div className="nf-modal-footer">
+                <div className="text-[11px] text-slate-400">
+                  Improves demo insights: adoption friction, workforce demand, feature engagement.
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="nf-btn-ghost" onClick={onClose}>Cancel</button>
+                  <button className="nf-btn-primary" onClick={save}>Save profile</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // -------------------------------------------------------------------
+      // Widget marketplace
+      // -------------------------------------------------------------------
+      const WIDGET_CATALOGUE = [
+        { id: "profile", title: "Profile settings", roles: ["engineer"], desc: "Certs, insurance, DBS, rates, availability." },
+        { id: "dao_status", title: "DAO status", roles: ["engineer"], desc: "Submission, pending review, approval/rejection." },
+        { id: "task_inbox", title: "Task inbox", roles: ["engineer"], desc: "Real-time offers + sound/vibration alerts." },
+        { id: "engineer_id_card", title: "Digital engineer ID", roles: ["engineer"], desc: "Licence-style card; export to PNG after approval." },
+
+        { id: "ticket_cockpit", title: "Ticket cockpit", roles: ["client","dao"], desc: "Raise ticket (mirrors escrow deposit), list tickets." },
+        { id: "escrow", title: "Escrow (Revolut-aligned)", roles: ["client","dao","engineer"], desc: "Deposit buffer, ledger, releases/refunds." },
+        { id: "asset_registry", title: "Asset registry", roles: ["engineer","client","dao"], desc: "Assets + PLC alerts (create test alerts)." },
+        { id: "dao_queue", title: "DAO review queue", roles: ["dao"], desc: "Approve/reject engineers (demo)." },
+
+        { id: "demo_performance", title: "Demo performance", roles: ["engineer","client","dao"], desc: "Most used features + time spent + summaries." },
+        { id: "demo_demographics", title: "Demographics & sessions", roles: ["engineer","client","dao"], desc: "Non-identifying profile + session context." },
+        { id: "workforce_kpis", title: "Workforce demand KPIs", roles: ["engineer","client","dao"], desc: "Acceptance, SLA risk (demo placeholder + future backend)." },
+      ];
+
+      function WidgetMarketModal({ open, role, enabled, onToggle, onClose }) {
+        if (!open) return null;
+        const items = WIDGET_CATALOGUE.filter((w) => w.roles.includes(role));
+
+        return (
+          <div className="nf-modal-overlay">
+            <div className="nf-modal">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="nf-modal-title">Widget marketplace</div>
+                  <div className="nf-modal-sub">Add/remove widgets for this role.</div>
+                </div>
+                <button className="nf-appbar-btn" onClick={onClose}>Close</button>
+              </div>
+
+              <div className="nf-divider"></div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                {items.map((w) => {
+                  const isOn = !!enabled[w.id];
+                  return (
+                    <button
+                      key={w.id}
+                      onClick={() => onToggle && onToggle(w.id)}
+                      className={
+                        "text-left rounded-2xl border px-3 py-2.5 transition " +
+                        (isOn
+                          ? "border-sky-400/90 bg-sky-900/30"
+                          : "border-slate-700/80 bg-slate-950/40 hover:border-slate-400/70")
+                      }
+                      title={w.desc}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-[12px] font-semibold text-slate-100">{w.title}</div>
+                        <span className={"nf-status-badge " + (isOn ? "nf-status-approved" : "nf-status-not-submitted")}>
+                          {isOn ? "Enabled" : "Off"}
+                        </span>
+                      </div>
+                      <div className="text-[11px] text-slate-400 mt-1">{w.desc}</div>
+                      <div className="mt-2 text-[10px] text-slate-500 font-mono">id: {w.id}</div>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="nf-modal-footer">
+                <div className="text-[11px] text-slate-400">
+                  Tip: keep Engineer essentials always on: Profile, DAO status, Task inbox, Digital ID.
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="nf-btn-ghost" onClick={onClose}>Done</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // -------------------------------------------------------------------
+      // Demo performance widget (uses FakeAPI.getDemoAnalyticsSummary())
+      // -------------------------------------------------------------------
+      function DemoPerformanceWidget() {
+        const [summary, setSummary] = useState(null);
+        const [loading, setLoading] = useState(false);
+
+        async function load() {
+          setLoading(true);
+          try {
+            api.startFeature && api.startFeature("demo_performance_widget");
+            const data = await (api.getDemoAnalyticsSummary ? api.getDemoAnalyticsSummary() : Promise.resolve(null));
+            setSummary(data || null);
+            api.endFeature && api.endFeature("demo_performance_widget");
+          } catch (e) {
+            console.warn(e);
+          } finally {
+            setLoading(false);
+          }
+        }
+
+        useEffect(() => {
+          api.track && api.track("widget_opened", { widget: "demo_performance" });
+          load();
+        }, []);
+
+        const features = summary?.features || [];
+        const topEvents = summary?.topEvents || [];
+
+        return (
+          <div className="nf-panel-widget h-full flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-300">Demo performance</div>
+                <div className="text-[11px] text-slate-400">Local + optional backend summary</div>
+              </div>
+              <button className="nf-appbar-btn" onClick={load}>Refresh</button>
+            </div>
+
+            <div className="nf-divider"></div>
+
+            {loading && !summary ? (
+              <>
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+                <Skeleton className="h-10" />
+              </>
+            ) : !summary ? (
+              <div className="text-[11px] text-slate-400">No analytics yet.</div>
+            ) : (
+              <>
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+                    <div className="text-[10px] text-slate-400">Session mins</div>
+                    <div className="text-[16px] font-semibold text-slate-100">{summary.sessionMins || 1}</div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+                    <div className="text-[10px] text-slate-400">Events</div>
+                    <div className="text-[16px] font-semibold text-slate-100">{summary.totalEvents || 0}</div>
+                  </div>
+                  <div className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+                    <div className="text-[10px] text-slate-400">Top widget</div>
+                    <div className="text-[12px] font-semibold text-slate-100">{summary.topWidget || "—"}</div>
+                    <div className="text-[10px] text-slate-400">{summary.topWidgetMins ? `${summary.topWidgetMins} mins` : ""}</div>
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-slate-300 font-semibold mt-1">Feature timers</div>
+                <div className="space-y-1.5 max-h-[170px] overflow-y-auto pr-1">
+                  {features.length === 0 ? (
+                    <div className="text-[11px] text-slate-400">No feature timers recorded yet.</div>
+                  ) : (
+                    features.map((f) => (
+                      <div key={f.feature} className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-[12px] text-slate-100 font-semibold">{String(f.feature).replace(/_/g, " ")}</div>
+                          <span className="nf-pill text-[10px]">{f.mins} mins</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 mt-1">
+                          opens: {f.opens || 0}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="text-[11px] text-slate-300 font-semibold mt-1">Top events</div>
+                <div className="space-y-1.5 max-h-[140px] overflow-y-auto pr-1">
+                  {topEvents.length === 0 ? (
+                    <div className="text-[11px] text-slate-400">No events counted yet.</div>
+                  ) : (
+                    topEvents.map((e) => (
+                      <div key={e.event} className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2 flex items-center justify-between">
+                        <div className="text-[11px] text-slate-100 font-semibold">{e.event}</div>
+                        <span className="nf-pill text-[10px]">{e.count}</span>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </>
+            )}
+          </div>
+        );
+      }
+
+      function DemographicsSessionsWidget({ onOpenDemographics }) {
+        const [demo, setDemo] = useState(null);
+        const [roleInfo, setRoleInfo] = useState(null);
+
+        useEffect(() => {
+          Promise.resolve(api.getDemographics ? api.getDemographics() : null).then(setDemo);
+          Promise.resolve(api.getRole ? api.getRole() : null).then(setRoleInfo);
+          api.track && api.track("widget_opened", { widget: "demo_demographics" });
+        }, []);
+
+        return (
+          <div className="nf-panel-widget h-full flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-300">Demographics & sessions</div>
+                <div className="text-[11px] text-slate-400">Non-identifying profile + session context</div>
+              </div>
+              <button className="nf-appbar-btn" onClick={onOpenDemographics}>Edit</button>
+            </div>
+
+            <div className="nf-divider"></div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+                <div className="text-[10px] text-slate-400">Current role</div>
+                <div className="text-[13px] font-semibold text-slate-100">{roleInfo?.role || "—"}</div>
+                <div className="text-[10px] text-slate-500 font-mono mt-1">engineerId: {roleInfo?.engineerId || "—"}</div>
+                <div className="text-[10px] text-slate-500 font-mono">clientId: {roleInfo?.clientId || "—"}</div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+                <div className="text-[10px] text-slate-400">Profile set</div>
+                <div className="text-[13px] font-semibold text-slate-100">{demo ? "Yes" : "Not yet"}</div>
+                <div className="text-[10px] text-slate-500 mt-1">
+                  {demo?.region ? `Region: ${demo.region}` : "Complete to enrich analytics."}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+              <div className="text-[11px] text-slate-300 font-semibold">Profile snapshot</div>
+              <div className="text-[10px] text-slate-400 mt-1">
+                {demo
+                  ? `${demo.roleType || "—"} · ${demo.orgType || "—"} · ${demo.tradeBand || "—"} · ${demo.experienceBand || "—"} · ${demo.deviceContext || "—"}`
+                  : "No demo profile recorded yet."}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function WorkforceKpisWidget() {
+        const [data] = useState({
+          acceptanceRate: null,
+          avgTimeToAcceptSec: null,
+          slaRiskShare: null,
+          demandByTrade: [
+            { trade: "HVAC", score: 0.72 },
+            { trade: "Electrical", score: 0.54 },
+            { trade: "Fire & Safety", score: 0.41 },
+            { trade: "Lift", score: 0.33 },
+          ],
+        });
+
+        useEffect(() => {
+          api.track && api.track("widget_opened", { widget: "workforce_kpis" });
+        }, []);
+
+        return (
+          <div className="nf-panel-widget h-full flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-300">Workforce demand KPIs</div>
+                <div className="text-[11px] text-slate-400">Matching efficiency + trade scarcity signals (demo)</div>
+              </div>
+              <span className="nf-pill nf-pill-beta text-[10px]">LIVE BETA</span>
+            </div>
+
+            <div className="nf-divider"></div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+                <div className="text-[10px] text-slate-400">Offer acceptance</div>
+                <div className="text-[16px] font-semibold text-slate-100">
+                  {data.acceptanceRate == null ? "—" : `${Math.round(data.acceptanceRate * 100)}%`}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+                <div className="text-[10px] text-slate-400">Avg time to accept</div>
+                <div className="text-[16px] font-semibold text-slate-100">
+                  {data.avgTimeToAcceptSec == null ? "—" : `${Math.round(data.avgTimeToAcceptSec)}s`}
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+                <div className="text-[10px] text-slate-400">SLA risk share</div>
+                <div className="text-[16px] font-semibold text-slate-100">
+                  {data.slaRiskShare == null ? "—" : `${Math.round(data.slaRiskShare * 100)}%`}
+                </div>
+              </div>
+            </div>
+
+            <div className="text-[11px] text-slate-300 font-semibold mt-1">Demand by trade</div>
+            <div className="space-y-1.5">
+              {data.demandByTrade.map((x) => (
+                <div key={x.trade} className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[12px] font-semibold text-slate-100">{x.trade}</div>
+                    <span className="nf-pill text-[10px]">score {Math.round(x.score * 100)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      }
+
+      // -------------------------------------------------------------------
+      // Profile Settings widget (Engineer) — FakeAPI.getEngineerProfile/saveEngineerProfile
+      // -------------------------------------------------------------------
+      function ProfileSettingsWidget() {
+        const [saving, setSaving] = useState(false);
+        const [error, setError] = useState("");
+
+        const [form, setForm] = useState({
+          engineerId: "eng_demo",
+          fullName: "Demo Engineer",
+          country: "United Kingdom",
+          language: "English (UK)",
+          hourlyRateGBP: 65,
+          tradePrimary: "HVAC",
+          phone: "",
+          email: "",
+          bio: "Emergency response engineer (demo).",
+          certs: [],
+          dbs: null,
+          insurance: null,
+          profilePhotoDataUrl: "",
+        });
+
+        useEffect(() => {
+          let mounted = true;
+          (async () => {
+            try {
+              api.startFeature && api.startFeature("profile_settings");
+              const p = api.getEngineerProfile ? await api.getEngineerProfile() : null;
+              if (!mounted) return;
+              if (p) setForm((prev) => ({ ...prev, ...p }));
+              api.endFeature && api.endFeature("profile_settings");
+              api.track && api.track("widget_opened", { widget: "profile" });
+            } catch {}
+          })();
+          return () => { mounted = false; };
+        }, []);
+
+        function setField(name, value) {
+          setForm((p) => ({ ...p, [name]: value }));
+        }
+
+        function addFakeUpload(kind) {
+          const item = {
+            id: `${kind}_${Math.random().toString(16).slice(2)}`,
+            name: kind === "cert" ? "Certification.pdf" : kind === "dbs" ? "DBS.pdf" : "Insurance.pdf",
+            uploadedAt: new Date().toISOString(),
+          };
+          if (kind === "cert") setField("certs", [...(form.certs || []), item]);
+          if (kind === "dbs") setField("dbs", item);
+          if (kind === "insurance") setField("insurance", item);
+          api.track && api.track("profile_upload_added", { kind });
+        }
+
+        async function onSave() {
+          setSaving(true);
+          setError("");
+          try {
+            api.track && api.track("profile_save_clicked", {});
+            const res = api.saveEngineerProfile ? await api.saveEngineerProfile(form) : null;
+            setForm((p) => ({ ...p, ...(res || {}) }));
+            api.track && api.track("profile_saved", { ok: true });
+          } catch (e) {
+            setError("Could not save profile (demo).");
+            api.track && api.track("profile_saved", { ok: false, error: String(e?.message || e) });
+          } finally {
+            setSaving(false);
+          }
+        }
+
+        return (
+          <div className="nf-panel-widget h-full flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-300">Profile settings</div>
+                <div className="text-[11px] text-slate-400">Certs, insurance, DBS, rates, availability</div>
+              </div>
+              <span className="nf-pill nf-pill-beta text-[10px]">LIVE BETA</span>
+            </div>
+
+            <div className="nf-divider"></div>
+
+            {error && (
+              <div className="text-[11px] text-rose-300 bg-rose-950/40 border border-rose-500/60 rounded-xl px-3 py-2">
+                {error}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div>
+                <div className="text-[11px] text-slate-300 mb-1">Full name</div>
+                <input className="nf-input text-[12px]" value={form.fullName} onChange={(e) => setField("fullName", e.target.value)} />
+              </div>
+
+              <div>
+                <div className="text-[11px] text-slate-300 mb-1">Engineer ID</div>
+                <input
+                  className="nf-input text-[12px]"
+                  value={form.engineerId}
+                  onChange={(e) => setField("engineerId", e.target.value)}
+                  onBlur={() => api.setEngineerId && api.setEngineerId(form.engineerId)}
+                />
+              </div>
+
+              <div>
+                <div className="text-[11px] text-slate-300 mb-1">Country</div>
+                <select className="nf-input text-[12px]" value={form.country} onChange={(e) => setField("country", e.target.value)}>
+                  <option>United Kingdom</option><option>Ireland</option><option>France</option><option>Germany</option><option>Romania</option><option>Other</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="text-[11px] text-slate-300 mb-1">Language</div>
+                <select className="nf-input text-[12px]" value={form.language} onChange={(e) => setField("language", e.target.value)}>
+                  <option>English (UK)</option><option>English (US)</option><option>French</option><option>German</option><option>Romanian</option><option>Other</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="text-[11px] text-slate-300 mb-1">Primary trade</div>
+                <select className="nf-input text-[12px]" value={form.tradePrimary} onChange={(e) => setField("tradePrimary", e.target.value)}>
+                  <option>HVAC</option><option>Electrical</option><option>Fire & Safety</option><option>Lift</option><option>Plumbing</option><option>BMS</option><option>Industrial / PLC</option>
+                </select>
+              </div>
+
+              <div>
+                <div className="text-[11px] text-slate-300 mb-1">Hourly rate (GBP)</div>
+                <input className="nf-input text-[12px]" type="number" min="0" value={form.hourlyRateGBP}
+                       onChange={(e) => setField("hourlyRateGBP", Number(e.target.value || 0))} />
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[11px] text-slate-300 mb-1">Bio</div>
+              <textarea className="nf-input text-[12px]" value={form.bio} onChange={(e) => setField("bio", e.target.value)} />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              <button className="nf-btn-ghost text-[11px]" onClick={() => addFakeUpload("cert")}>+ Add certification (demo)</button>
+              <button className="nf-btn-ghost text-[11px]" onClick={() => addFakeUpload("dbs")}>+ Add DBS (demo)</button>
+              <button className="nf-btn-ghost text-[11px]" onClick={() => addFakeUpload("insurance")}>+ Add insurance (demo)</button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+              <div className="text-[11px] text-slate-300 font-semibold">Uploads (demo metadata)</div>
+              <div className="text-[10px] text-slate-400 mt-1">
+                Certs: {(form.certs || []).length} · DBS: {form.dbs ? "Yes" : "No"} · Insurance: {form.insurance ? "Yes" : "No"}
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between gap-2">
+              <button className="nf-btn-primary" onClick={onSave} disabled={saving}>{saving ? "Saving..." : "Save profile"}</button>
+              <span className="text-[10px] text-slate-500">Saved profile improves matching + certification.</span>
+            </div>
+          </div>
+        );
+      }
+
+      // -------------------------------------------------------------------
+      // DAO Status widget (Engineer) — submitProfileToDAO/getDAOStatus/resubmitDAO
+      // -------------------------------------------------------------------
+      function DaoStatusWidget({ onApproved }) {
+        const [status, setStatus] = useState(null);
+        const [loading, setLoading] = useState(false);
+
+        async function refresh() {
+          setLoading(true);
+          try {
+            const s = api.getDAOStatus ? await api.getDAOStatus() : null;
+            setStatus(s || null);
+            if ((s?.status || "").toUpperCase() === "APPROVED") onApproved && onApproved(s);
+          } catch {} finally {
+            setLoading(false);
+          }
+        }
+
+        useEffect(() => {
+          api.track && api.track("widget_opened", { widget: "dao_status" });
+          refresh();
+        }, []);
+
+        async function submit() {
+          setLoading(true);
+          try {
+            api.track && api.track("dao_submit_clicked", {});
+            await (api.submitProfileToDAO ? api.submitProfileToDAO() : Promise.resolve());
+            await refresh();
+          } catch {} finally {
+            setLoading(false);
+          }
+        }
+
+        async function resubmit() {
+          setLoading(true);
+          try {
+            api.track && api.track("dao_resubmit_clicked", {});
+            await (api.resubmitDAO ? api.resubmitDAO() : Promise.resolve());
+            await refresh();
+          } catch {} finally {
+            setLoading(false);
+          }
+        }
+
+        const s = (status?.status || status?.state || "NOT_SUBMITTED").toUpperCase();
+        const badge =
+          s === "APPROVED" ? "APPROVED" :
+          (s === "PENDING" || s === "IN_REVIEW") ? "PENDING" :
+          s === "REJECTED" ? "REJECTED" : "NOT_SUBMITTED";
+
+        return (
+          <div className="nf-panel-widget h-full flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-300">DAO status</div>
+                <div className="text-[11px] text-slate-400">Certification workflow (demo)</div>
+              </div>
+              <span className="nf-pill nf-pill-beta text-[10px]">LIVE BETA</span>
+            </div>
+
+            <div className="nf-divider"></div>
+
+            <div className="flex items-center justify-between gap-2">
+              <div className="text-[12px] text-slate-100 font-semibold">Status: <StatusBadge status={badge} /></div>
+              <button className="nf-appbar-btn" onClick={refresh} disabled={loading}>{loading ? "..." : "Refresh"}</button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+              <div className="text-[11px] text-slate-300 font-semibold">Notes</div>
+              <div className="text-[10px] text-slate-400 mt-1">{status?.note || status?.message || "No notes yet."}</div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {badge === "NOT_SUBMITTED" && <button className="nf-btn-primary" onClick={submit} disabled={loading}>Submit for DAO review</button>}
+              {badge === "REJECTED" && <button className="nf-btn-primary" onClick={resubmit} disabled={loading}>Resubmit</button>}
+              {badge === "APPROVED" && <div className="text-[11px] text-emerald-300">✅ Certified — Digital ID unlocked</div>}
+            </div>
+          </div>
+        );
+      }
+
+      // -------------------------------------------------------------------
+      // Digital Engineer ID Card widget (licence layout) + PNG export
+      // -------------------------------------------------------------------
+      async function exportEngineerIdCardPng(profile) {
+        const width = 1024;
+        const height = 640;
+
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+
+        // Background
+        const grd = ctx.createLinearGradient(0, 0, width, height);
+        grd.addColorStop(0, "#020617");
+        grd.addColorStop(1, "#0b1227");
+        ctx.fillStyle = grd;
+        ctx.fillRect(0, 0, width, height);
+
+        // Border
+        ctx.strokeStyle = "#38bdf8";
+        ctx.lineWidth = 6;
+        ctx.strokeRect(20, 20, width - 40, height - 40);
+
+        // Header
+        ctx.fillStyle = "#e5e7eb";
+        ctx.font = "700 32px system-ui";
+        ctx.fillText("NOTFALL ENGINEERS — DIGITAL ID", 60, 80);
+
+        ctx.fillStyle = "#f87171";
+        ctx.font = "700 18px system-ui";
+        ctx.fillText("LIVE BETA", width - 180, 80);
+
+        // Photo
+        if (profile?.profilePhotoDataUrl) {
+          const img = new Image();
+          img.src = profile.profilePhotoDataUrl;
+          await new Promise((res) => (img.onload = res));
+          ctx.drawImage(img, 60, 120, 180, 220);
+        } else {
+          ctx.fillStyle = "#0f172a";
+          ctx.fillRect(60, 120, 180, 220);
+          ctx.fillStyle = "#94a3b8";
+          ctx.font = "14px system-ui";
+          ctx.fillText("No photo", 110, 240);
+        }
+
+        // Details
+        ctx.fillStyle = "#e5e7eb";
+        ctx.font = "800 30px system-ui";
+        ctx.fillText(profile?.fullName || "Engineer", 280, 155);
+
+        ctx.font = "16px system-ui";
+        ctx.fillStyle = "#cbd5f5";
+        ctx.fillText(`Engineer ID: ${profile?.engineerId || "eng_demo"}`, 280, 200);
+        ctx.fillText(`Trade: ${profile?.tradePrimary || "HVAC"}`, 280, 230);
+        ctx.fillText(`Country: ${profile?.country || "United Kingdom"}`, 280, 260);
+        ctx.fillText(`Language: ${profile?.language || "English (UK)"}`, 280, 290);
+        ctx.fillText(`Rate: £${profile?.hourlyRateGBP || 65}/hr`, 280, 320);
+
+        // Seal
+        ctx.fillStyle = "#22c55e";
+        ctx.font = "900 18px system-ui";
+        ctx.fillText("DAO CERTIFIED ENGINEER", 280, 370);
+
+        ctx.font = "12px ui-monospace, SFMono-Regular, Menlo, monospace";
+        ctx.fillStyle = "#94a3b8";
+        ctx.fillText(`Issued ${new Date().toISOString().slice(0, 10)} • Level39 Demo`, 60, height - 60);
+
+        const url = canvas.toDataURL("image/png");
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `Notfall_Engineer_ID_${profile?.engineerId || "eng_demo"}.png`;
+        a.click();
+      }
+
+      function EngineerIdCardWidget({ daoStatus }) {
+        const [profile, setProfile] = useState(null);
+
+        useEffect(() => {
+          (async () => {
+            try {
+              const p = api.getEngineerProfile ? await api.getEngineerProfile() : null;
+              setProfile(p || null);
+              api.track && api.track("widget_opened", { widget: "engineer_id_card" });
+            } catch {}
+          })();
+        }, []);
+
+        const approved = String(daoStatus || "").toUpperCase() === "APPROVED";
+
+        return (
+          <div className="nf-panel-widget h-full flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-300">Digital engineer ID</div>
+                <div className="text-[11px] text-slate-400">Licence-style card • export PNG</div>
+              </div>
+              <span className={"nf-status-badge " + (approved ? "nf-status-approved" : "nf-status-not-submitted")}>
+                {approved ? "Unlocked" : "Locked"}
+              </span>
+            </div>
+
+            <div className="nf-divider"></div>
+
+            {!approved ? (
+              <div className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-3 text-[11px] text-slate-400">
+                Locked until DAO approval. Submit your profile, then approve via DAO queue (DAO role).
+              </div>
+            ) : (
+              <div className="rounded-[26px] border border-sky-400/60 bg-slate-950/50 overflow-hidden shadow-[0_24px_70px_rgba(15,23,42,0.95)]">
+                <div className="px-4 py-3 bg-gradient-to-r from-sky-900/50 to-indigo-900/40 border-b border-slate-700/80">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-[11px] uppercase tracking-[0.22em] text-slate-200 font-semibold">
+                      NOTFALL ENGINEERS • DIGITAL ID
+                    </div>
+                    <div className="text-[10px] text-red-400 font-semibold uppercase tracking-[0.16em]">
+                      LIVE BETA
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-slate-400 mt-1">DAO certified engineer credential</div>
+                </div>
+
+                <div className="p-4 grid grid-cols-[96px_1fr] gap-3">
+                  <div className="rounded-2xl border border-slate-700/80 bg-slate-900/40 h-[120px] flex items-center justify-center overflow-hidden">
+                    {profile?.profilePhotoDataUrl ? (
+                      <img src={profile.profilePhotoDataUrl} alt="Engineer" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                    ) : (
+                      <div className="text-[10px] text-slate-400 px-2 text-center">Profile photo<div className="text-[10px] text-slate-500 mt-1">(Add in profile)</div></div>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <div className="text-[14px] font-extrabold text-slate-100">{profile?.fullName || "Demo Engineer"}</div>
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      engineerId: {profile?.engineerId || "eng_demo"} • trade: {profile?.tradePrimary || "HVAC"}
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      Country: <span className="text-slate-200">{profile?.country || "United Kingdom"}</span> •
+                      Language: <span className="text-slate-200">{profile?.language || "English (UK)"}</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400">
+                      Rate: <span className="text-slate-200">£{profile?.hourlyRateGBP || 65}/hr</span> •
+                      Status: <span className="text-emerald-300 font-semibold">DAO APPROVED</span>
+                    </div>
+
+                    <div className="mt-2 rounded-2xl border border-emerald-400/40 bg-emerald-950/20 px-3 py-2">
+                      <div className="text-[10px] text-slate-300 font-semibold uppercase tracking-[0.18em]">Credential signature</div>
+                      <div className="text-[10px] text-slate-400 mt-1 font-mono">{profile?.engineerId || "eng_demo"} • {new Date().getFullYear()} • L39 DEMO</div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="px-4 pb-4 flex items-center justify-between gap-2">
+                  <button
+                    className="nf-btn-primary text-[11px]"
+                    onClick={() => {
+                      api.track && api.track("id_card_export_clicked", {});
+                      exportEngineerIdCardPng(profile || {});
+                    }}
+                  >
+                    Download PNG
+                  </button>
+                  <div className="text-[10px] text-slate-500">Social-ready • licence layout</div>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      }
+      // -------------------------------------------------------------------
+      // Task Inbox (Engineer) — compatible with FakeAPI.getTasks() + WS
+      // FakeAPI subscribes to topics: "task", "ticket", "payments", "plcAlert", ...
+      // We'll accept many shapes: msg.topic==="task" && (msg.offer||msg.task||msg.payload)
+      // -------------------------------------------------------------------
+      function TaskInboxWidget() {
+  const [tasks, setTasks] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [lastOfferAt, setLastOfferAt] = useState(null);
+  const [error, setError] = useState(null);
+
+  const onWsEvent = useMemo(() => {
+    return (msg) => {
+      if (!msg) return;
+
+      // Offers can arrive as {topic:"task", action:"offer", payload:{...}}
+      // or {topic:"taskOffer", offer:{...}} (older variants)
+      const topic = String(msg.topic || "").toLowerCase();
+      const action = String(msg.action || msg.type || "").toLowerCase();
+
+      const offer =
+        msg.offer ||
+        (topic === "task" && (msg.payload?.offer || msg.payload)) ||
+        (topic === "taskoffer" && msg.payload) ||
+        null;
+
+      const taskUpdate =
+        msg.task ||
+        (topic === "task" && (msg.payload?.task || (action && msg.payload))) ||
+        null;
+
+      // ---- Offer received ----
+      if (offer && (action === "offer" || topic === "taskoffer" || msg.offer)) {
+        setLastOfferAt(new Date().toISOString());
+        setTasks((prev) => [normaliseTask(offer), ...(prev || [])]);
+
+        playOfferSound();
+        vibrate([70, 40, 70]);
+
+        api.track && api.track("task_offer_received", { offerId: offer?.id || offer?._id });
+        return;
+      }
+
+      // ---- Update existing task ----
+      if (taskUpdate && (action === "update" || action === "status" || topic === "task")) {
+        const incoming = normaliseTask(taskUpdate);
+        setTasks((prev) =>
+          (prev || []).map((t) => {
+            const tid = t?._id || t?.id;
+            const uid = incoming?._id || incoming?.id;
+            return tid && uid && tid === uid ? incoming : t;
+          })
+        );
+      }
+    };
+  }, []);
+
+  // Uses your FakeAPI socket hook (must exist in your demo file)
+  useFakeApiSocket({ onEvent: onWsEvent });
+
+  function normaliseTask(t) {
+    // ensures id exists and keeps UI stable
+    const _id = t?._id || t?.id || t?.taskId || t?.offerId;
+    return { ...t, _id };
+  }
+
+  async function load() {
+    setLoading(true);
+    setError(null);
+    try {
+      api.startFeature && api.startFeature("task_inbox");
+      const data = api.getTasks ? await api.getTasks() : [];
+      setTasks((data || []).map(normaliseTask));
+      api.endFeature && api.endFeature("task_inbox");
+      api.track && api.track("task_inbox_loaded", { count: (data || []).length });
+    } catch (e) {
+      setError("Failed to load tasks");
+      console.warn(e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    api.track && api.track("widget_opened", { widget: "task_inbox" });
+    load();
+  }, []);
+
+  async function act(action, id) {
+    if (!id) return;
+    try {
+      api.track && api.track("task_action", { action, id });
+      if (action === "accept" && api.acceptTask) await api.acceptTask(id);
+      if (action === "decline" && api.declineTask) await api.declineTask(id);
+      if (action === "travel" && api.startTravel) await api.startTravel(id);
+      if (action === "arrive" && api.arriveOnSite) await api.arriveOnSite(id);
+      if (action === "complete" && api.completeTask) await api.completeTask(id);
+      await load();
+    } catch (e) {
+      console.warn(e);
+      setError("Action failed (check API/CORS)");
+    }
+  }
+
+  return (
+    <div className="nf-panel-widget h-full flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-2">
+        <div>
+          <div className="text-xs uppercase tracking-[0.18em] text-slate-300">Task inbox</div>
+          <div className="text-[11px] text-slate-400">
+            Live updates via FakeAPI socket • sound + vibration
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="nf-live-chip text-[10px]">
+            <span className="nf-dot" />
+            <span>{lastOfferAt ? `Last offer: ${timeAgo(lastOfferAt)}` : "Listening"}</span>
+          </span>
+          <button className="nf-appbar-btn" onClick={load}>Refresh</button>
+        </div>
+      </div>
+
+      <div className="nf-divider"></div>
+
+      {error ? (
+        <div className="text-[11px] text-red-300">{error}</div>
+      ) : null}
+
+      {loading && tasks.length === 0 ? (
+        <>
+          <Skeleton className="h-12 rounded-2xl" />
+          <Skeleton className="h-12 rounded-2xl" />
+          <Skeleton className="h-12 rounded-2xl" />
+        </>
+      ) : tasks.length === 0 ? (
+        <div className="text-[11px] text-slate-400">
+          No tasks yet. Create a ticket (Client/FM) to generate offers.
+        </div>
+      ) : (
+        <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+          {tasks.map((t) => {
+            const id = t._id || t.id;
+            return (
+              <div key={id} className="nf-task-card">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[12px] font-semibold text-slate-100">
+                    {t.summary || t.title || "Task"}
+                  </div>
+                  <StatusBadge status={String(t.status || "NEW").toUpperCase()} />
+                </div>
+
+                <div className="text-[10px] text-slate-400 mt-1">
+                  {t.site || t.location || "Level39 — 1 Canada Square"} • {t.trade || "HVAC"} •{" "}
+                  {t.priority || "HIGH"}
+                </div>
+
+                <div className="mt-2 flex items-center gap-2 flex-wrap">
+                  <button className="nf-btn-primary text-[11px]" onClick={() => act("accept", id)}>Accept</button>
+                  <button className="nf-btn-ghost text-[11px]" onClick={() => act("decline", id)}>Decline</button>
+                  <button className="nf-btn-ghost text-[11px]" onClick={() => act("travel", id)}>Start travel</button>
+                  <button className="nf-btn-ghost text-[11px]" onClick={() => act("arrive", id)}>Arrive</button>
+                  <button className="nf-btn-ghost text-[11px]" onClick={() => act("complete", id)}>Complete</button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+      // -------------------------------------------------------------------
+      // Escrow widget — FakeAPI compatible:
+      // getEscrowAccount(), getEscrowStatus(), escrowDeposit(), listEscrowLedger(), getEscrowBalance()
+      // plus local ledger transitions: escrowReleaseToEngineer(), escrowRefundToClient()
+      // -------------------------------------------------------------------
+/* -------------------------------------------------------------------------
+   EscrowWidget (Revolut-aligned) — full component
+   Fixes: Cannot read properties of null (reading 'heldInEscrowGBP')
+   Adds: loading + inline feedback, WS live updates, safe defaults, ledger UI
+---------------------------------------------------------------------------*/
+
+function EscrowWidget({
+  role = "client",               // "client" | "fm" | "dao" | "engineer"
+  apiBase = "",                  // e.g. "" (same origin) or "http://localhost:8080"
+  wsUrl = "ws://localhost:8080/ws/widgets",
+  defaultDepositGBP = 200,
+  defaultRefPrefix = "NF-ESCROW",
+  defaultRefCode = "L39-DEMO-ESCROW",
+  clientLabel = "Demo Client / FM",
+}) {
+  const fmtGBP = (n) =>
+    new Intl.NumberFormat("en-GB", { style: "currency", currency: "GBP" }).format(
+      Number.isFinite(+n) ? +n : 0
+    );
+
+  const nowISO = () => new Date().toISOString();
+
+  const safeStatus = (s) => ({
+    provider: s?.provider ?? "Revolut Business",
+    accountName: s?.accountName ?? "Notfall Engineers — Escrow (Operational)",
+    currency: s?.currency ?? "GBP",
+    ibanMasked: s?.ibanMasked ?? "GB** **** **** **** 1234",
+    refPrefix: s?.refPrefix ?? defaultRefPrefix,
+    heldInEscrowGBP: Number.isFinite(+s?.heldInEscrowGBP) ? +s.heldInEscrowGBP : 0,
+    releasedGBP: Number.isFinite(+s?.releasedGBP) ? +s.releasedGBP : 0,
+    refundedGBP: Number.isFinite(+s?.refundedGBP) ? +s.refundedGBP : 0,
+    updatedAt: s?.updatedAt ?? nowISO(),
+  });
+
+  const [status, setStatus] = React.useState(() => safeStatus(null));
+  const [ledger, setLedger] = React.useState(() => []);
+  const [depositGBP, setDepositGBP] = React.useState(defaultDepositGBP);
+  const [reference, setReference] = React.useState(defaultRefCode);
+  const [payerLabel, setPayerLabel] = React.useState(clientLabel);
+
+  const [busy, setBusy] = React.useState(false);
+  const [busyMsg, setBusyMsg] = React.useState("");
+  const [flash, setFlash] = React.useState(null); // {type:"ok"|"warn"|"err", msg:string}
+  const [wsState, setWsState] = React.useState({ connected: false, ms: null });
+
+  const flashMsg = React.useCallback((type, msg) => {
+    setFlash({ type, msg, t: Date.now() });
+    window.clearTimeout(flashMsg._t);
+    flashMsg._t = window.setTimeout(() => setFlash(null), 3200);
+  }, []);
+  React.useEffect(() => () => window.clearTimeout(flashMsg._t), [flashMsg]);
+
+  async function jfetch(path, opts = {}) {
+    const res = await fetch(apiBase + path, {
+      headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
+      ...opts,
+    });
+    const text = await res.text();
+    let json = null;
+    try {
+      json = text ? JSON.parse(text) : null;
+    } catch {
+      json = null;
+    }
+    if (!res.ok) {
+      const msg =
+        json?.error || json?.message || `Request failed (${res.status})`;
+      throw new Error(msg);
+    }
+    return json;
+  }
+
+  async function refresh() {
+    setBusy(true);
+    setBusyMsg("Refreshing escrow status…");
+    try {
+      const data = await jfetch("/api/payments/escrow/status", { method: "GET" });
+      // expected shape:
+      // { status: { heldInEscrowGBP, releasedGBP, refundedGBP, ... }, ledger: [...] }
+      const nextStatus = safeStatus(data?.status || data);
+      setStatus(nextStatus);
+      setLedger(Array.isArray(data?.ledger) ? data.ledger : Array.isArray(data?.entries) ? data.entries : ledger);
+      flashMsg("ok", "Escrow status refreshed.");
+    } catch (e) {
+      flashMsg("err", e.message || "Failed to refresh escrow.");
+    } finally {
+      setBusy(false);
+      setBusyMsg("");
+    }
+  }
+
+  async function deposit() {
+    const amt = +depositGBP;
+    if (!Number.isFinite(amt) || amt <= 0) return flashMsg("warn", "Enter a valid deposit amount.");
+    if (!reference?.trim()) return flashMsg("warn", "Reference code is required.");
+    if (!payerLabel?.trim()) return flashMsg("warn", "Payer label is required.");
+
+    setBusy(true);
+    setBusyMsg("Depositing to Revolut escrow (demo)…");
+    try {
+      const payload = {
+        amountGBP: amt,
+        reference: reference.trim(),
+        payerLabel: payerLabel.trim(),
+        role,
+        source: "demo-ui",
+      };
+      const data = await jfetch("/api/payments/escrow/deposit", {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
+
+      // allow either: {status, ledgerEntry} or {status, ledger}
+      const nextStatus = safeStatus(data?.status || data);
+      setStatus(nextStatus);
+
+      if (data?.ledgerEntry) {
+        setLedger((prev) => [data.ledgerEntry, ...prev].slice(0, 50));
+      } else if (Array.isArray(data?.ledger)) {
+        setLedger(data.ledger);
+      }
+
+      flashMsg("ok", `Deposit confirmed: ${fmtGBP(amt)} held in escrow.`);
+    } catch (e) {
+      flashMsg("err", e.message || "Deposit failed.");
+    } finally {
+      setBusy(false);
+      setBusyMsg("");
+    }
+  }
+
+  // Optional controls (if your API supports them)
+  async function release(amountGBP) {
+    const amt = +amountGBP;
+    if (!Number.isFinite(amt) || amt <= 0) return flashMsg("warn", "Enter a valid release amount.");
+    setBusy(true);
+    setBusyMsg("Releasing funds (demo)…");
+    try {
+      const data = await jfetch("/api/payments/escrow/release", {
+        method: "POST",
+        body: JSON.stringify({ amountGBP: amt, role, source: "demo-ui" }),
+      });
+      setStatus(safeStatus(data?.status || data));
+      if (data?.ledgerEntry) setLedger((p) => [data.ledgerEntry, ...p].slice(0, 50));
+      flashMsg("ok", `Released ${fmtGBP(amt)}.`);
+    } catch (e) {
+      flashMsg("err", e.message || "Release failed.");
+    } finally {
+      setBusy(false);
+      setBusyMsg("");
+    }
+  }
+
+  async function refund(amountGBP) {
+    const amt = +amountGBP;
+    if (!Number.isFinite(amt) || amt <= 0) return flashMsg("warn", "Enter a valid refund amount.");
+    setBusy(true);
+    setBusyMsg("Refunding (demo)…");
+    try {
+      const data = await jfetch("/api/payments/escrow/refund", {
+        method: "POST",
+        body: JSON.stringify({ amountGBP: amt, role, source: "demo-ui" }),
+      });
+      setStatus(safeStatus(data?.status || data));
+      if (data?.ledgerEntry) setLedger((p) => [data.ledgerEntry, ...p].slice(0, 50));
+      flashMsg("ok", `Refunded ${fmtGBP(amt)}.`);
+    } catch (e) {
+      flashMsg("err", e.message || "Refund failed.");
+    } finally {
+      setBusy(false);
+      setBusyMsg("");
+    }
+  }
+
+  // WebSocket: listen for live escrow updates
+  React.useEffect(() => {
+    let ws;
+    let alive = true;
+    let pingT;
+    let lastPingAt = 0;
+
+    function connect() {
+      try {
+        ws = new WebSocket(wsUrl);
+      } catch {
+        return;
+      }
+
+      ws.onopen = () => {
+        if (!alive) return;
+        setWsState((s) => ({ ...s, connected: true }));
+        // If your server supports subscriptions, this is safe/no-op otherwise
+        try {
+          ws.send(
+            JSON.stringify({
+              type: "subscribe",
+              topic: "escrow",
+              role,
+              at: nowISO(),
+            })
+          );
+        } catch {}
+        // simple latency ping
+        pingT = window.setInterval(() => {
+          if (ws?.readyState === 1) {
+            lastPingAt = Date.now();
+            ws.send(JSON.stringify({ type: "ping", t: lastPingAt }));
+          }
+        }, 5000);
+      };
+
+      ws.onmessage = (ev) => {
+        if (!alive) return;
+        let msg = null;
+        try {
+          msg = JSON.parse(ev.data);
+        } catch {
+          return;
+        }
+
+        if (msg?.type === "pong" && msg?.t) {
+          setWsState((s) => ({ ...s, ms: Math.max(0, Date.now() - msg.t) }));
+          return;
+        }
+
+        // expected update message examples:
+        // {type:"escrow:update", status:{...}, ledgerEntry:{...}}
+        // {type:"escrow:status", payload:{status, ledger}}
+        const t = msg?.type || "";
+        if (t === "escrow:update" || t === "escrow:status") {
+          const next = safeStatus(msg?.status || msg?.payload?.status || msg?.payload || null);
+          setStatus(next);
+          if (msg?.ledgerEntry) setLedger((p) => [msg.ledgerEntry, ...p].slice(0, 50));
+          if (Array.isArray(msg?.payload?.ledger)) setLedger(msg.payload.ledger);
+        }
+      };
+
+      ws.onclose = () => {
+        if (!alive) return;
+        setWsState({ connected: false, ms: null });
+        window.clearInterval(pingT);
+        // soft reconnect
+        window.setTimeout(() => alive && connect(), 1200);
+      };
+
+      ws.onerror = () => {
+        // let onclose handle reconnect
+      };
+    }
+
+    connect();
+    return () => {
+      alive = false;
+      window.clearInterval(pingT);
+      try {
+        ws && ws.close();
+      } catch {}
+    };
+  }, [wsUrl, role]);
+
+  React.useEffect(() => {
+    // initial load
+    refresh();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const kpiHeld = fmtGBP(status.heldInEscrowGBP);
+  const kpiReleased = fmtGBP(status.releasedGBP);
+  const kpiRefunded = fmtGBP(status.refundedGBP);
+
+  const flashClass =
+    flash?.type === "ok"
+      ? "nf-pill"
+      : flash?.type === "warn"
+      ? "nf-pill nf-pill-beta"
+      : "nf-pill nf-pill-beta";
+
+  const wsChip = wsState.connected ? (
+    <span className="nf-pill" title="WebSocket live updates">
+      <span className="nf-dot" /> WS {wsState.ms != null ? `• ${wsState.ms} ms` : ""}
+    </span>
+  ) : (
+    <span className="nf-pill" title="WebSocket disconnected">
+      <span className="nf-dot nf-dot-idle" /> WS • offline
+    </span>
+  );
+
+  return (
+    <div className="nf-panel-widget">
+      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12 }}>
+        <div>
+          <div style={{ fontWeight: 800, letterSpacing: "0.08em", fontSize: 12, opacity: 0.85 }}>
+            ESCROW (REVOLUT-ALIGNED)
+          </div>
+          <div className="nf-muted" style={{ fontSize: 11, marginTop: 4 }}>
+            Deposit buffer → <b>HELD</b> → release / refund
+          </div>
+        </div>
+
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {wsChip}
+          <button className="nf-btn-ghost" onClick={refresh} disabled={busy} title="Refresh">
+            {busy ? "…" : "Refresh"}
+          </button>
+        </div>
+      </div>
+
+      <div className="nf-divider" />
+
+      {/* Operational account bar */}
+      <div
+        style={{
+          borderRadius: 18,
+          padding: "12px 14px",
+          border: "1px solid rgba(148,163,184,0.35)",
+          background: "radial-gradient(circle at 0 0, rgba(15,23,42,0.92), rgba(2,6,23,0.98))",
+          boxShadow: "0 18px 55px rgba(15,23,42,0.85)",
+        }}
+      >
+        <div style={{ fontWeight: 700, fontSize: 12 }}>Operational escrow account (demo-safe)</div>
+        <div className="nf-muted" style={{ fontSize: 11, marginTop: 4, lineHeight: 1.35 }}>
+          Provider: {status.provider} • Account: {status.accountName} • Currency: {status.currency}
+          <br />
+          IBAN: {status.ibanMasked} • Ref prefix: {status.refPrefix}
+        </div>
+      </div>
+
+      {/* KPIs */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, minmax(0, 1fr))", gap: 12, marginTop: 14 }}>
+        <div
+          style={{
+            borderRadius: 18,
+            padding: "12px 14px",
+            border: "1px solid rgba(34,197,94,0.35)",
+            background: "radial-gradient(circle at 0 0, rgba(34,197,94,0.18), rgba(2,6,23,0.98))",
+            boxShadow: "0 16px 45px rgba(15,23,42,0.9)",
+          }}
+        >
+          <div className="nf-muted" style={{ fontSize: 11 }}>Held in escrow</div>
+          <div style={{ fontSize: 18, fontWeight: 900, color: "#bbf7d0", textShadow: "0 0 18px rgba(34,197,94,0.35)" }}>
+            {kpiHeld}
+          </div>
+        </div>
+
+        <div
+          style={{
+            borderRadius: 18,
+            padding: "12px 14px",
+            border: "1px solid rgba(59,130,246,0.35)",
+            background: "radial-gradient(circle at 0 0, rgba(59,130,246,0.16), rgba(2,6,23,0.98))",
+            boxShadow: "0 16px 45px rgba(15,23,42,0.9)",
+          }}
+        >
+          <div className="nf-muted" style={{ fontSize: 11 }}>Released</div>
+          <div style={{ fontSize: 18, fontWeight: 900 }}>{kpiReleased}</div>
+        </div>
+
+        <div
+          style={{
+            borderRadius: 18,
+            padding: "12px 14px",
+            border: "1px solid rgba(248,113,113,0.35)",
+            background: "radial-gradient(circle at 0 0, rgba(248,113,113,0.14), rgba(2,6,23,0.98))",
+            boxShadow: "0 16px 45px rgba(15,23,42,0.9)",
+          }}
+        >
+          <div className="nf-muted" style={{ fontSize: 11 }}>Refunded</div>
+          <div style={{ fontSize: 18, fontWeight: 900 }}>{kpiRefunded}</div>
+        </div>
+      </div>
+
+      {/* Feedback strip */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10, marginTop: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, minHeight: 22 }}>
+          {busy ? (
+            <span className="nf-pill">
+              <span className="nf-dot" /> {busyMsg || "Working…"}
+            </span>
+          ) : flash ? (
+            <span className={flashClass}>{flash.msg}</span>
+          ) : (
+            <span className="nf-muted" style={{ fontSize: 11 }}>
+              Last update: {new Date(status.updatedAt).toLocaleString("en-GB")}
+            </span>
+          )}
+        </div>
+
+        {/* Role hint */}
+        <span className="nf-pill" title="Current role context">
+          Role: {String(role).toUpperCase()}
+        </span>
+      </div>
+
+      <div className="nf-divider" />
+
+      {/* Deposit controls */}
+      <div style={{ display: "grid", gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)", gap: 12 }}>
+        <div>
+          <label className="nf-field-label">Deposit buffer</label>
+          <input
+            className="nf-input"
+            type="number"
+            min="0"
+            step="1"
+            value={depositGBP}
+            onChange={(e) => setDepositGBP(e.target.value)}
+            disabled={busy}
+          />
+        </div>
+        <div>
+          <label className="nf-field-label">Reference</label>
+          <input
+            className="nf-input"
+            value={reference}
+            onChange={(e) => setReference(e.target.value)}
+            disabled={busy}
+          />
+        </div>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <label className="nf-field-label">Payer label</label>
+        <input
+          className="nf-input"
+          value={payerLabel}
+          onChange={(e) => setPayerLabel(e.target.value)}
+          disabled={busy}
+        />
+      </div>
+
+      <div style={{ display: "flex", gap: 10, marginTop: 12, flexWrap: "wrap" }}>
+        <button className="nf-btn-primary" onClick={deposit} disabled={busy}>
+          Deposit to Revolut escrow (demo)
+        </button>
+
+        {/* Optional: show these only for DAO/FM roles if you want */}
+        <button
+          className="nf-btn-ghost"
+          onClick={() => release(depositGBP)}
+          disabled={busy || status.heldInEscrowGBP <= 0}
+          title="Demo-only: release funds"
+        >
+          Release (demo)
+        </button>
+        <button
+          className="nf-btn-ghost"
+          onClick={() => refund(depositGBP)}
+          disabled={busy || status.heldInEscrowGBP <= 0}
+          title="Demo-only: refund funds"
+        >
+          Refund (demo)
+        </button>
+      </div>
+
+      {/* Ledger */}
+      <div style={{ marginTop: 14 }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ fontWeight: 800, letterSpacing: "0.08em", fontSize: 11, opacity: 0.9 }}>
+            Escrow ledger
+          </div>
+          <span className="nf-pill">{(ledger?.length || 0)} entries</span>
+        </div>
+
+        <div
+          style={{
+            marginTop: 10,
+            borderRadius: 18,
+            padding: "10px 12px",
+            border: "1px solid rgba(148,163,184,0.35)",
+            background: "radial-gradient(circle at 0 0, rgba(15,23,42,0.92), rgba(2,6,23,0.98))",
+            maxHeight: 210,
+            overflow: "auto",
+          }}
+        >
+          {Array.isArray(ledger) && ledger.length > 0 ? (
+            ledger.slice(0, 30).map((x, idx) => {
+              const kind = (x?.type || x?.action || "event").toLowerCase();
+              const amt = x?.amountGBP ?? x?.amount ?? 0;
+              const when = x?.at || x?.createdAt || x?.timestamp || null;
+              const ref = x?.reference || x?.ref || x?.refCode || reference;
+              const who = x?.payerLabel || x?.by || x?.actor || payerLabel;
+
+              return (
+                <div
+                  key={(x?.id || x?._id || idx) + "_" + idx}
+                  style={{
+                    borderRadius: 14,
+                    padding: "10px 10px",
+                    marginBottom: 8,
+                    border: "1px solid rgba(59,130,246,0.22)",
+                    background: "rgba(15,23,42,0.65)",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
+                    gap: 10,
+                  }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 750, fontSize: 12 }}>
+                      {kind.toUpperCase()} • {fmtGBP(amt)}
+                    </div>
+                    <div className="nf-muted" style={{ fontSize: 10, marginTop: 2, lineHeight: 1.35 }}>
+                      Ref: {ref} • By: {who}
+                      <br />
+                      {when ? new Date(when).toLocaleString("en-GB") : "—"}
+                    </div>
+                  </div>
+
+                  <span className="nf-pill">
+                    {x?.status ? String(x.status).toUpperCase() : "OK"}
+                  </span>
+                </div>
+              );
+            })
+          ) : (
+            <div className="nf-muted" style={{ fontSize: 12, padding: "8px 2px" }}>
+              No deposits yet.
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+      // -------------------------------------------------------------------
+      // Asset Registry widget — FakeAPI.getAssets/getPlcAlerts/createAsset/createTestPlcAlert
+      // -------------------------------------------------------------------
+      function AssetRegistryWidget({ role }) {
+        const [assets, setAssets] = useState([]);
+        const [alerts, setAlerts] = useState([]);
+        const [loading, setLoading] = useState(false);
+
+        useFakeApiSocket({
+          onEvent: (msg) => {
+            const topic = String(msg.topic || "").toLowerCase();
+            if (topic === "assetregistry" || topic === "plcalert") {
+              refresh(true);
+            }
+          },
+        });
+
+        async function refresh(soft=false) {
+          if (!soft) setLoading(true);
+          try {
+            const a = api.getAssets ? await api.getAssets() : [];
+            const p = api.getPlcAlerts ? await api.getPlcAlerts() : [];
+            setAssets(Array.isArray(a) ? a : []);
+            setAlerts(Array.isArray(p) ? p : []);
+            api.track && api.track("asset_registry_refreshed", { assets: (a||[]).length, alerts: (p||[]).length });
+          } catch (e) {
+            console.warn(e);
+          } finally {
+            if (!soft) setLoading(false);
+          }
+        }
+
+        useEffect(() => {
+          api.track && api.track("widget_opened", { widget: "asset_registry" });
+          refresh();
+        }, []);
+
+        async function createAsset() {
+          setLoading(true);
+          try {
+            await (api.createAsset ? api.createAsset({
+              name: "Chiller Plant 01",
+              siteName: "Level39 — 1 Canada Square",
+              siteCode: "L39",
+              type: "Chiller",
+              criticality: "High",
+              plcTag: "DB1.FaultCode",
+            }) : Promise.resolve());
+            await refresh(true);
+          } finally {
+            setLoading(false);
+          }
+        }
+
+        async function createTestAlert(severity="High") {
+          setLoading(true);
+          try {
+            await (api.createTestPlcAlert ? api.createTestPlcAlert({
+              severity,
+              message: "Demo PLC fault event",
+              code: "E-CHILL-042",
+              siteName: "Level39 — 1 Canada Square",
+              siteCode: "L39",
+              plcTag: "DB1.FaultCode",
+            }) : Promise.resolve());
+            await refresh(true);
+          } finally {
+            setLoading(false);
+          }
+        }
+
+        return (
+          <div className="nf-panel-widget h-full flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-300">Asset registry</div>
+                <div className="text-[11px] text-slate-400">Assets + PLC alerts stream (demo)</div>
+              </div>
+              <button className="nf-appbar-btn" onClick={() => refresh()} disabled={loading}>{loading ? "..." : "Refresh"}</button>
+            </div>
+
+            <div className="nf-divider"></div>
+
+            <div className="flex items-center gap-2 flex-wrap">
+              {(role === "client" || role === "dao") ? (
+                <>
+                  <button className="nf-btn-primary text-[11px]" onClick={createAsset} disabled={loading}>+ Create asset</button>
+                  <button className="nf-btn-ghost text-[11px]" onClick={() => createTestAlert("High")} disabled={loading}>+ Test alert (High)</button>
+                  <button className="nf-btn-ghost text-[11px]" onClick={() => createTestAlert("Critical")} disabled={loading}>+ Test alert (Critical)</button>
+                </>
+              ) : (
+                <span className="text-[11px] text-slate-400">Read-only for Engineer role.</span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              <div className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[11px] text-slate-300 font-semibold">Assets</div>
+                  <span className="nf-pill text-[10px]">{assets.length}</span>
+                </div>
+                <div className="mt-2 space-y-2 max-h-[210px] overflow-y-auto pr-1">
+                  {assets.length === 0 ? (
+                    <div className="text-[11px] text-slate-400">No assets yet.</div>
+                  ) : (
+                    assets.map((x) => (
+                      <div key={x._id || x.id} className="rounded-2xl border border-slate-700/80 bg-slate-950/30 px-3 py-2">
+                        <div className="text-[12px] font-semibold text-slate-100">{x.name || "Asset"}</div>
+                        <div className="text-[10px] text-slate-500 font-mono mt-1">{x.siteName || x.site || "—"} • {x.type || "—"} • {x.plcTag || "—"}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <div className="text-[11px] text-slate-300 font-semibold">PLC alerts</div>
+                  <span className="nf-pill text-[10px]">{alerts.length}</span>
+                </div>
+                <div className="mt-2 space-y-2 max-h-[210px] overflow-y-auto pr-1">
+                  {alerts.length === 0 ? (
+                    <div className="text-[11px] text-slate-400">No PLC alerts yet.</div>
+                  ) : (
+                    alerts.map((a) => (
+                      <div key={a._id || a.id} className="rounded-2xl border border-slate-700/80 bg-slate-950/30 px-3 py-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-[12px] font-semibold text-slate-100">
+                            {(a.code ? `[${a.code}] ` : "") + (a.message || "PLC alert")}
+                          </div>
+                          <span className="nf-pill text-[10px]">{String(a.severity || "Medium").toUpperCase()}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-500 font-mono mt-1">{a.siteName || "—"} • {a.plcTag || "—"} • {timeAgo(a.createdAt || a.at)}</div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      // -------------------------------------------------------------------
+      // Ticket Cockpit widget — FakeAPI.createDemoTicket/getClientTickets
+      // (Create ticket mirrors escrow deposit automatically inside FakeAPI)
+      // -------------------------------------------------------------------
+      function TicketCockpitWidget() {
+        const [tickets, setTickets] = useState([]);
+        const [loading, setLoading] = useState(false);
+
+        const [form, setForm] = useState({
+          site: "Level39 — 1 Canada Square",
+          summary: "Emergency boiler leak — reception zone",
+          description: "Auto-generated ticket from demo cockpit.",
+          priority: "HIGH",
+          trade: "HVAC",
+          depositAmountGBP: 200,
+          source: "Manual",
+        });
+
+        async function refresh() {
+          setLoading(true);
+          try {
+            const t = api.getClientTickets ? await api.getClientTickets() : [];
+            setTickets(Array.isArray(t) ? t : []);
+          } catch {} finally {
+            setLoading(false);
+          }
+        }
+
+        useEffect(() => {
+          api.track && api.track("widget_opened", { widget: "ticket_cockpit" });
+          refresh();
+        }, []);
+
+        async function create() {
+          setLoading(true);
+          try {
+            api.track && api.track("ticket_create_clicked", { trade: form.trade, priority: form.priority });
+            await (api.createDemoTicket ? api.createDemoTicket(form) : Promise.resolve(null));
+            await refresh();
+          } catch (e) {
+            console.warn(e);
+          } finally {
+            setLoading(false);
+          }
+        }
+
+        return (
+          <div className="nf-panel-widget h-full flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-300">Ticket cockpit</div>
+                <div className="text-[11px] text-slate-400">Create ticket • auto mirrors escrow deposit</div>
+              </div>
+              <button className="nf-appbar-btn" onClick={refresh} disabled={loading}>{loading ? "..." : "Refresh"}</button>
+            </div>
+
+            <div className="nf-divider"></div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              {[
+                ["Site", "site"],
+                ["Summary", "summary"],
+                ["Trade", "trade"],
+                ["Priority", "priority"],
+              ].map(([label, key]) => (
+                <div key={key}>
+                  <div className="text-[11px] text-slate-300 mb-1">{label}</div>
+                  {key === "trade" ? (
+                    <select className="nf-input text-[12px]" value={form.trade} onChange={(e) => setForm((p) => ({ ...p, trade: e.target.value }))}>
+                      <option>HVAC</option><option>Electrical</option><option>Fire & Safety</option><option>Lift</option><option>Plumbing</option><option>BMS</option><option>Industrial / PLC</option>
+                    </select>
+                  ) : key === "priority" ? (
+                    <select className="nf-input text-[12px]" value={form.priority} onChange={(e) => setForm((p) => ({ ...p, priority: e.target.value }))}>
+                      <option>LOW</option><option>MEDIUM</option><option>HIGH</option><option>CRITICAL</option>
+                    </select>
+                  ) : (
+                    <input className="nf-input text-[12px]" value={form[key]} onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))} />
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div>
+              <div className="text-[11px] text-slate-300 mb-1">Description</div>
+              <textarea className="nf-input text-[12px]" value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} />
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-end">
+              <div>
+                <div className="text-[11px] text-slate-300 mb-1">Deposit amount (GBP)</div>
+                <input className="nf-input text-[12px]" type="number" min="0" value={form.depositAmountGBP} onChange={(e) => setForm((p) => ({ ...p, depositAmountGBP: Number(e.target.value || 0) }))} />
+                <div className="text-[10px] text-slate-500 mt-1">Your FakeAPI mirrors escrow deposit if &gt; 0.</div>
+              </div>
+
+              <button className="nf-btn-primary" onClick={create} disabled={loading}>
+                {loading ? "Creating..." : "Create ticket"}
+              </button>
+            </div>
+
+            <div className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[11px] text-slate-300 font-semibold">Tickets</div>
+                <span className="nf-pill text-[10px]">{tickets.length}</span>
+              </div>
+
+              <div className="mt-2 space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                {tickets.length === 0 ? (
+                  <div className="text-[11px] text-slate-400">No tickets yet.</div>
+                ) : (
+                  tickets.map((t) => (
+                    <div key={t._id || t.id || t.ticketId} className="rounded-2xl border border-slate-700/80 bg-slate-950/30 px-3 py-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-[12px] font-semibold text-slate-100">{t.summary || "Ticket"}</div>
+                        <StatusBadge status={String(t.status || "OPEN").toUpperCase()} />
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-1 font-mono">
+                        {t.site || "—"} • {t.trade || "—"} • {t.priority || "—"} • id: {t.id || t.ticketId || t._id || "—"}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function TicketFeedWidget({ ws, onSelectTicket }) {
+  const [tickets, setTickets] = React.useState([]);
+
+  React.useEffect(() => {
+    if (!ws) return;
+
+    // subscribe once
+    ws.send(JSON.stringify({ type: "subscribe", topics: ["ticket"] }));
+
+    const onMsg = (ev) => {
+      let msg;
+      try { msg = JSON.parse(ev.data); } catch { return; }
+
+      if (msg.topic !== "ticket") return;
+      if (msg.action !== "created") return;
+
+      const t = msg.payload || {};
+      const item = {
+        id: t.ticketId || msg.ticketId,
+        site: t.site,
+        summary: t.summary,
+        severity: t.severity,
+        status: t.status,
+        trade: t.trade,
+        deposit: t.depositAmountGBP,
+        createdAt: t.createdAt
+      };
+
+      setTickets((prev) => [item, ...prev].slice(0, 50));
+    };
+
+    ws.addEventListener("message", onMsg);
+    return () => ws.removeEventListener("message", onMsg);
+  }, [ws]);
+
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="text-lg font-semibold text-slate-100">Ticket Feed</div>
+          <div className="text-xs text-slate-400">Live: ticket.created</div>
+        </div>
+        <span className="text-xs text-slate-400">{tickets.length} shown</span>
+      </div>
+
+      <div className="space-y-2">
+        {tickets.length === 0 && (
+          <div className="text-sm text-slate-400">No tickets yet — raise one from Client-FM.</div>
+        )}
+
+        {tickets.map((t) => (
+          <button
+            key={t.id}
+            onClick={() => onSelectTicket?.(t)}
+            className="w-full text-left rounded-2xl border border-white/10 bg-white/5 hover:bg-white/7 px-4 py-3 transition"
+          >
+            <div className="flex items-center justify-between">
+              <div className="text-sm font-medium text-slate-100 truncate">{t.summary}</div>
+              <div className="text-xs text-slate-300">{t.severity || "MEDIUM"}</div>
+            </div>
+            <div className="mt-1 text-xs text-slate-400 truncate">{t.site}</div>
+            <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
+              <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
+                {t.trade || "Multi-trade"}
+              </span>
+              <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10">
+                {t.status || "NEW"}
+              </span>
+              <span className="ml-auto text-emerald-300">
+                £{Number(t.deposit || 200).toFixed(0)}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+
+      // -------------------------------------------------------------------
+      // DAO Review Queue — FakeAPI.getDaoQueue/approveDaoEngineer/rejectDaoEngineer
+      // -------------------------------------------------------------------
+      function DaoQueueWidget() {
+        const [items, setItems] = useState([]);
+        const [loading, setLoading] = useState(false);
+
+        async function refresh() {
+          setLoading(true);
+          try {
+            const q = api.getDaoQueue ? await api.getDaoQueue() : [];
+            setItems(Array.isArray(q) ? q : []);
+          } catch {} finally {
+            setLoading(false);
+          }
+        }
+
+        useEffect(() => {
+          api.track && api.track("widget_opened", { widget: "dao_queue" });
+          refresh();
+        }, []);
+
+        async function approve(engineerId) {
+          setLoading(true);
+          try {
+            await (api.approveDaoEngineer ? api.approveDaoEngineer(engineerId, "Approved (demo)") : Promise.resolve());
+            await refresh();
+          } finally { setLoading(false); }
+        }
+
+        async function reject(engineerId) {
+          setLoading(true);
+          try {
+            await (api.rejectDaoEngineer ? api.rejectDaoEngineer(engineerId, "Rejected (demo)") : Promise.resolve());
+            await refresh();
+          } finally { setLoading(false); }
+        }
+
+        return (
+          <div className="nf-panel-widget h-full flex flex-col gap-3">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-xs uppercase tracking-[0.18em] text-slate-300">DAO review queue</div>
+                <div className="text-[11px] text-slate-400">Approve/reject engineers (demo)</div>
+              </div>
+              <button className="nf-appbar-btn" onClick={refresh} disabled={loading}>{loading ? "..." : "Refresh"}</button>
+            </div>
+
+            <div className="nf-divider"></div>
+
+            <div className="space-y-2 max-h-[360px] overflow-y-auto pr-1">
+              {items.length === 0 ? (
+                <div className="text-[11px] text-slate-400">Queue empty.</div>
+              ) : (
+                items.map((x) => (
+                  <div key={x.engineerId || x._id || Math.random()} className="rounded-2xl border border-slate-700/80 bg-slate-950/40 px-3 py-2">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[12px] font-semibold text-slate-100">
+                        {x.fullName || "Engineer"} <span className="text-slate-400 font-mono text-[10px]">({x.engineerId || "—"})</span>
+                      </div>
+                      <StatusBadge status={String(x.status || "PENDING").toUpperCase()} />
+                    </div>
+                    <div className="text-[10px] text-slate-500 mt-1">
+                      {x.tradePrimary || "—"} • {x.country || "—"} • {x.language || "—"}
+                    </div>
+                    <div className="mt-2 flex items-center gap-2">
+                      <button className="nf-btn-primary text-[11px]" onClick={() => approve(x.engineerId)} disabled={loading}>Approve</button>
+                      <button className="nf-btn-ghost text-[11px]" onClick={() => reject(x.engineerId)} disabled={loading}>Reject</button>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        );
+      }
+
+      function DAOCertCard({ profile, daoStatus, onClose }) {
+  const [photoPreviewUrl, setPhotoPreviewUrl] = React.useState(null);
+
+  // Helper: safely pick a File from your profile snapshot
+  const photoFile =
+    profile?.photoFile ||
+    profile?.photo ||
+    profile?.avatarFile ||
+    profile?.profilePhotoFile ||
+    null;
+
+  const fallbackUrl =
+    profile?.photoUrl ||
+    profile?.avatarUrl ||
+    profile?.profilePhotoUrl ||
+    null;
+
+  // Create + revoke object URL whenever the file changes
+  React.useEffect(() => {
+    if (!photoFile) {
+      setPhotoPreviewUrl(null);
+      return;
+    }
+
+    // Only create object URLs for actual File/Blob
+    const isBlobLike =
+      typeof photoFile === "object" &&
+      (photoFile instanceof Blob || typeof photoFile.size === "number");
+
+    if (!isBlobLike) {
+      setPhotoPreviewUrl(null);
+      return;
+    }
+
+    const url = URL.createObjectURL(photoFile);
+    setPhotoPreviewUrl(url);
+
+    return () => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {}
+    };
+  }, [photoFile]);
+
+  function handleClose() {
+    // Revoke current preview URL immediately (in addition to effect cleanup)
+    if (photoPreviewUrl) {
+      try {
+        URL.revokeObjectURL(photoPreviewUrl);
+      } catch {}
+    }
+    onClose && onClose();
+  }
+
+  const displayName =
+    profile?.fullName ||
+    profile?.name ||
+    [profile?.firstName, profile?.lastName].filter(Boolean).join(" ") ||
+    "Engineer";
+
+  const licenceNo =
+    profile?.licenceNo ||
+    profile?.licenseNo ||
+    profile?.engineerId ||
+    profile?.id ||
+    "NF-ENG-DEMO";
+
+  const trade =
+    profile?.primaryTrade ||
+    profile?.trade ||
+    profile?.discipline ||
+    "Multi-trade";
+
+  const issued =
+    profile?.issuedAt ||
+    profile?.submittedAt ||
+    new Date().toISOString();
+
+  const statusLabel = String(daoStatus || "NOT_SUBMITTED").toUpperCase();
+
+  const imgSrc = photoPreviewUrl || fallbackUrl || null;
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center">
+      <div
+        className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+        onClick={handleClose}
+      />
+      <div className="relative w-[92vw] max-w-[520px] rounded-3xl border border-slate-800 bg-slate-950 shadow-[0_0_80px_rgba(2,6,23,0.8)] overflow-hidden">
+        {/* Header */}
+        <div className="px-5 pt-4 pb-3 border-b border-slate-800 flex items-center justify-between">
+          <div>
+            <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
+              DAO Certification Card
+            </div>
+            <div className="text-sm font-semibold mt-1">
+              {displayName}
+            </div>
+          </div>
+          <button
+            type="button"
+            className="nf-btn-ghost text-xs px-3 py-1"
+            onClick={handleClose}
+          >
+            Close
+          </button>
+        </div>
+
+        {/* Card body (driving-licence vibe) */}
+        <div className="p-5 grid grid-cols-12 gap-4">
+          {/* Photo */}
+          <div className="col-span-12 sm:col-span-4">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/30 p-3">
+              <div className="text-[10px] uppercase tracking-[0.18em] text-slate-400 mb-2">
+                Photo
+              </div>
+              <div className="aspect-[3/4] rounded-xl overflow-hidden border border-slate-800 bg-slate-950 flex items-center justify-center">
+                {imgSrc ? (
+                  <img
+                    src={imgSrc}
+                    alt="Engineer profile"
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                    decoding="async"
+                  />
+                ) : (
+                  <div className="text-[11px] text-slate-500 text-center px-3">
+                    No photo uploaded
+                  </div>
+                )}
+              </div>
+              <div className="mt-2 text-[10px] text-slate-500">
+                Proof-of-personhood in production.
+              </div>
+            </div>
+          </div>
+
+          {/* Details */}
+          <div className="col-span-12 sm:col-span-8 space-y-3">
+            <div className="rounded-2xl border border-slate-800 bg-slate-900/20 p-4">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[11px] uppercase tracking-[0.18em] text-slate-400">
+                  Licence
+                </div>
+                <span className="nf-pill text-[10px] uppercase tracking-wide">
+                  {statusLabel}
+                </span>
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-3 text-[11px]">
+                <div>
+                  <div className="text-slate-400">Licence No</div>
+                  <div className="mt-0.5 font-mono text-slate-100">{licenceNo}</div>
+                </div>
+                <div>
+                  <div className="text-slate-400">Trade</div>
+                  <div className="mt-0.5 text-slate-100">{trade}</div>
+                </div>
+                <div>
+                  <div className="text-slate-400">Issued</div>
+                  <div className="mt-0.5 text-slate-100">
+                    {new Date(issued).toLocaleString()}
+                  </div>
+                </div>
+                <div>
+                  <div className="text-slate-400">Authority</div>
+                  <div className="mt-0.5 text-slate-100">
+                    Notfall DAO / Certification Panel
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-3 text-[10px] text-slate-500">
+                Demo card only. Production card links to on-chain certification + audit logs.
+              </div>
+            </div>
+
+            {/* CTA row */}
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] text-slate-400">
+                Shareable ID for socials / site access.
+              </div>
+              <button
+                type="button"
+                className="nf-btn-primary text-xs px-4 py-2"
+                onClick={() => {
+                  // leave as a harmless demo action
+                  alert("Demo: export/share coming next (PNG/PDF + QR).");
+                }}
+              >
+                Export
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+      // -------------------------------------------------------------------
+      // Simple widget router (maps catalogue IDs to components)
+      // -------------------------------------------------------------------
+      function WidgetRenderer({ id, role, roleInfo, daoStatus, onDaoApproved, onOpenDemographics }) {
+        switch (id) {
+          case "profile":
+            return <ProfileSettingsWidget />;
+
+          case "dao_status":
+            return <DaoStatusWidget onApproved={onDaoApproved} />;
+
+          case "task_inbox":
+            return <TaskInboxWidget />;
+
+          case "engineer_id_card":
+            return <EngineerIdCardWidget daoStatus={daoStatus} />;
+
+          case "ticket_cockpit":
+            return <TicketCockpitWidget />;
+
+          case "escrow":
+            return <EscrowWidget role={role} roleInfo={roleInfo} />;
+
+          case "asset_registry":
+            return <AssetRegistryWidget role={role} />;
+
+          case "dao_queue":
+            return <DaoQueueWidget />;
+
+          case "demo_performance":
+            return <DemoPerformanceWidget />;
+
+          case "demo_demographics":
+            return <DemographicsSessionsWidget onOpenDemographics={onOpenDemographics} />;
+
+          case "workforce_kpis":
+            return <WorkforceKpisWidget />;
+
+          default:
+            return (
+              <div className="nf-panel-widget h-full">
+                <div className="text-[12px] font-semibold text-slate-100">Unknown widget</div>
+                <div className="text-[11px] text-slate-400 mt-1">
+                  Widget id: <span className="font-mono">{id}</span>
+                </div>
+              </div>
+            );
+        }
+      }
+
+      // -------------------------------------------------------------------
+      // Local storage helpers (per role widget layout)
+      // -------------------------------------------------------------------
+      function storageKeyForRole(role) {
+        return `nf_demo_widgets_v1_${String(role || "engineer").toLowerCase()}`;
+      }
+
+      function defaultWidgetsForRole(role) {
+        if (role === "engineer") return ["profile", "dao_status", "task_inbox", "engineer_id_card", "escrow", "demo_performance"];
+        if (role === "client") return ["ticket_cockpit", "escrow", "asset_registry", "demo_performance", "demo_demographics", "workforce_kpis"];
+        if (role === "dao") return ["dao_queue", "escrow", "asset_registry", "demo_performance", "demo_demographics", "workforce_kpis"];
+        return ["demo_performance"];
+      }
+
+      function loadEnabled(role) {
+        try {
+          const raw = localStorage.getItem(storageKeyForRole(role));
+          if (raw) return JSON.parse(raw);
+        } catch {}
+        // default: enable all defaults
+        const enabled = {};
+        for (const id of defaultWidgetsForRole(role)) enabled[id] = true;
+        return enabled;
+      }
+
+      function saveEnabled(role, enabled) {
+        try {
+          localStorage.setItem(storageKeyForRole(role), JSON.stringify(enabled || {}));
+        } catch {}
+      }
+
+      // -------------------------------------------------------------------
+      // App
+      // -------------------------------------------------------------------
+      function App() {
+        const [role, setRole] = useState("engineer"); // engineer | client | dao
+        const [roleInfo, setRoleInfo] = useState(null);
+
+        const [widgetMarketOpen, setWidgetMarketOpen] = useState(false);
+        const [demoProfileOpen, setDemoProfileOpen] = useState(false);
+
+        const [enabled, setEnabled] = useState(() => loadEnabled("engineer"));
+
+        // DAO status so ID card can unlock after approval
+        const [daoStatus, setDaoStatus] = useState("NOT_SUBMITTED");
+
+        // load role from FakeAPI on boot (preferred)
+        useEffect(() => {
+          let alive = true;
+          (async () => {
+            try {
+              const r = (api.getRole ? await api.getRole() : null) || null;
+              if (!alive) return;
+              const roleStr = String(r?.role || "ENGINEER").toLowerCase();
+              const mapped = roleStr.includes("dao") ? "dao" : roleStr.includes("client") ? "client" : "engineer";
+              setRole(mapped);
+              setRoleInfo(r || null);
+
+              // load widgets for that role
+              const en = loadEnabled(mapped);
+              setEnabled(en);
+
+              api.track && api.track("app_loaded", { role: mapped });
+            } catch (e) {
+              // fallback to engineer
+              setRole("engineer");
+              setEnabled(loadEnabled("engineer"));
+            }
+          })();
+          return () => { alive = false; };
+        }, []);
+
+        // When role changes, keep storage + FakeAPI identity aligned
+        async function switchRole(nextRole) {
+          const r = String(nextRole || "engineer").toLowerCase();
+          setRole(r);
+          const en = loadEnabled(r);
+          setEnabled(en);
+          saveEnabled(r, en);
+
+          // Inform FakeAPI (if supported)
+          try {
+            if (api.setRole) {
+              // your demoRoleRoutes expects ENGINEER|CLIENT|DAO_ADMIN
+              const mapped =
+                r === "dao" ? "DAO_ADMIN" :
+                r === "client" ? "CLIENT" : "ENGINEER";
+              const info = await api.setRole(mapped);
+              setRoleInfo(info || { role: mapped });
+            } else {
+              // at least refresh roleInfo
+              const info = api.getRole ? await api.getRole() : null;
+              setRoleInfo(info || null);
+            }
+          } catch {}
+
+          api.track && api.track("role_switched", { role: r });
+        }
+
+        function toggleWidget(id) {
+          setEnabled((prev) => {
+            const next = { ...(prev || {}) };
+            next[id] = !next[id];
+            saveEnabled(role, next);
+            api.track && api.track("widget_toggled", { role, widget: id, enabled: !!next[id] });
+            return next;
+          });
+        }
+
+        const allowedWidgets = useMemo(() => {
+          return WIDGET_CATALOGUE
+            .filter((w) => w.roles.includes(role))
+            .map((w) => w.id);
+        }, [role]);
+
+        const activeWidgetIds = useMemo(() => {
+          const ids = allowedWidgets.filter((id) => !!enabled[id]);
+          // if user disabled everything, show at least one
+          return ids.length ? ids : defaultWidgetsForRole(role);
+        }, [allowedWidgets, enabled, role]);
+
+        // When DAO approves engineer, update local daoStatus so ID card unlocks
+        function onDaoApproved(s) {
+          const st = String(s?.status || s?.state || "APPROVED").toUpperCase();
+          setDaoStatus(st);
+        }
+
+        return (
+          <div className="nf-root">
+            <div className="nf-appbar">
+              <div className="nf-appbar-inner">
+                <div className="nf-brand">
+                  <div className="nf-brand-logo">
+                    <div className="text-[12px] font-extrabold tracking-[0.08em] text-white">NOTFALL</div>
+                  </div>
+                  <div>
+                    <div className="nf-brand-title">Notfall Engineers</div>
+                    <div className="nf-brand-sub">Multi-role demo cockpit • Engineer / Client-FM / DAO</div>
+                  </div>
+                </div>
+
+                <div className="nf-appbar-actions">
+                  <span className="nf-chip">
+                    <span className="nf-chip-dot"></span>
+                    <span>Demo live</span>
+                  </span>
+
+                  <button className="nf-appbar-btn" onClick={() => setDemoProfileOpen(true)}>
+                    Demographics
+                  </button>
+
+                  <button className="nf-appbar-btn" onClick={() => setWidgetMarketOpen(true)}>
+                    Widgets
+                  </button>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      className="nf-appbar-btn"
+                      onClick={() => switchRole("engineer")}
+                      style={{ borderColor: role === "engineer" ? "#38bdf8" : undefined }}
+                    >
+                      Engineer
+                    </button>
+                    <button
+                      className="nf-appbar-btn"
+                      onClick={() => switchRole("client")}
+                      style={{ borderColor: role === "client" ? "#38bdf8" : undefined }}
+                    >
+                      Client / FM
+                    </button>
+                    <button
+                      className="nf-appbar-btn"
+                      onClick={() => switchRole("dao")}
+                      style={{ borderColor: role === "dao" ? "#38bdf8" : undefined }}
+                    >
+                      DAO
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="nf-shell-bg">
+              <div className="nf-panel-main">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div>
+                    <div className="text-[12px] uppercase tracking-[0.18em] text-slate-300">
+                      Active role: <span className="text-slate-100 font-semibold">{role.toUpperCase()}</span>
+                    </div>
+                    <div className="text-[11px] text-slate-400 mt-1">
+                      {roleInfo?.engineerId ? <span className="font-mono">engineerId: {roleInfo.engineerId}</span> : null}
+                      {roleInfo?.clientId ? <span className="font-mono"> • clientId: {roleInfo.clientId}</span> : null}
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span className="nf-pill nf-pill-beta">LIVE BETA</span>
+                    <span className="nf-pill">WS: /ws/widgets</span>
+                    <span className="nf-pill">API: /api/*</span>
+                  </div>
+                </div>
+
+                <div className="nf-divider"></div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                  {activeWidgetIds.map((id) => (
+                    <WidgetRenderer
+                      key={id}
+                      id={id}
+                      role={role}
+                      roleInfo={roleInfo}
+                      daoStatus={daoStatus}
+                      onDaoApproved={onDaoApproved}
+                      onOpenDemographics={() => setDemoProfileOpen(true)}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <WidgetMarketModal
+              open={widgetMarketOpen}
+              role={role}
+              enabled={enabled}
+              onToggle={toggleWidget}
+              onClose={() => setWidgetMarketOpen(false)}
+            />
+
+            <DemographicsModal
+              open={demoProfileOpen}
+              onClose={() => setDemoProfileOpen(false)}
+            />
+          </div>
+        );
+      }
+
+      // -------------------------------------------------------------------
+      // Mount
+      // -------------------------------------------------------------------
+      const root = ReactDOM.createRoot(document.getElementById("root"));
+      root.render(<App />);
+    </script>
+  </body>
+</html>
+
